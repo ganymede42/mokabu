@@ -14,8 +14,8 @@ CREATE TABLE tblPerson (
 	Adresse TEXT,
 	PLZ INTEGER DEFAULT 0,
 	Ort TEXT,
-	Telefon TEXT,
 	Mobile TEXT,
+	Telefon TEXT,
 	eMail TEXT,
 	Bemerkung TEXT,
 	CONSTRAINT PKtblPerson PRIMARY KEY (IDPerson)
@@ -29,9 +29,9 @@ CREATE UNIQUE INDEX IDXtblPerson ON tblPerson (IDPerson);
 CREATE TABLE tblRechnung (
 	IDRechnung INTEGER NOT NULL,
 	RFPerson INTEGER,
-	datRechnung DATE,
-	datGedruckt DATE,
-	datBezahlt DATE,
+	datRechnung INTEGER,
+	datGedruckt INTEGER,
+	datBezahlt INTEGER,
 	Bemerkung TEXT,
 	CONSTRAINT PKtblRechnung PRIMARY KEY (IDRechnung),
 	CONSTRAINT FKtblPersonRFPerson FOREIGN KEY (RFPerson) REFERENCES tblPerson(IDPerson)
@@ -45,20 +45,17 @@ CREATE INDEX IDXtblRechnungRFPerson ON tblRechnung (RFPerson);
 CREATE TABLE tblBehandlung (
 	IDBehandlung INTEGER NOT NULL,
 	RFRechnung INTEGER,
-	RFKurs INTEGER,
-	Datum DATE,
+	Datum INTEGER,
 	Bemerkung TEXT,
 	Dauer INTEGER DEFAULT 60,
 	Stundenansatz NUMERIC DEFAULT 180,
-	Betrag NUMERIC DEFAULT 120, Column1 INTEGER,
+	Betrag NUMERIC DEFAULT 120,
 	CONSTRAINT PKtblBehandlung PRIMARY KEY (IDBehandlung),
 	CONSTRAINT FKtblBehandlungRFRechnung FOREIGN KEY (RFRechnung) REFERENCES tblRechnung(IDRechnung)
 );
 
 CREATE UNIQUE INDEX IDXtblBehandlung ON tblBehandlung (IDBehandlung);
 CREATE INDEX IDXtblBehandlungRFRechnung ON tblBehandlung (RFRechnung);
-CREATE INDEX IDXtblBehandlungRFKurs ON tblBehandlung (RFKurs);
-
 
 -- tblBehandlungPendent definition
 
@@ -71,6 +68,8 @@ CREATE TABLE tblBehandlungPendent (
 	CONSTRAINT FKtblBehandlungPendentRFPerson FOREIGN KEY (RFPerson) REFERENCES tblPerson(IDPerson)
 );
 
-CREATE UNIQUE IDXtblBehandlungPendentIDBehPendent ON tblBehandlungPendent (IDBehPendent);
+CREATE UNIQUE INDEX IDXtblBehandlungPendentIDBehPendent ON tblBehandlungPendent (IDBehPendent);
 CREATE INDEX IDXtblBehandlungPendentRFBehandlung ON tblBehandlungPendent (RFBehandlung);
 CREATE INDEX IDXtblBehandlungPendentRFPerson ON tblBehandlungPendent (RFPerson);
+
+VACUUM;
