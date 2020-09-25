@@ -1,8 +1,8 @@
-DROP TABLE tblPerson;
-DROP TABLE tblRechnung;
+PRAGMA foreign_keys = 0;
 DROP TABLE tblBehandlung;
-DROP TABLE tblBehandlungPendent;
-
+DROP TABLE tblRechnung;
+DROP TABLE tblPerson;
+PRAGMA foreign_keys = 1;
 
 -- tblPerson definition
 
@@ -45,6 +45,7 @@ CREATE INDEX IDXtblRechnungRFPerson ON tblRechnung (RFPerson);
 CREATE TABLE tblBehandlung (
 	IDBehandlung INTEGER NOT NULL,
 	RFRechnung INTEGER,
+	RFPerson INTEGER,
 	Datum INTEGER,
 	Bemerkung TEXT,
 	Dauer INTEGER DEFAULT 60,
@@ -52,24 +53,11 @@ CREATE TABLE tblBehandlung (
 	Betrag NUMERIC DEFAULT 120,
 	CONSTRAINT PKtblBehandlung PRIMARY KEY (IDBehandlung),
 	CONSTRAINT FKtblBehandlungRFRechnung FOREIGN KEY (RFRechnung) REFERENCES tblRechnung(IDRechnung)
+	CONSTRAINT FKtblBehandlungRFPerson FOREIGN KEY (RFPerson) REFERENCES tblPerson(IDPerson)
 );
 
 CREATE UNIQUE INDEX IDXtblBehandlung ON tblBehandlung (IDBehandlung);
 CREATE INDEX IDXtblBehandlungRFRechnung ON tblBehandlung (RFRechnung);
-
--- tblBehandlungPendent definition
-
-CREATE TABLE tblBehandlungPendent (
-	IDBehPendent INTEGER NOT NULL,
-	RFBehandlung INTEGER,
-	RFPerson INTEGER,
-	CONSTRAINT PKtblBehandlungPendent PRIMARY KEY (IDBehPendent),
-	CONSTRAINT FKtblBehandlungPendentRFBehandlung FOREIGN KEY (RFBehandlung) REFERENCES tblBehandlung(IDBehandlung),
-	CONSTRAINT FKtblBehandlungPendentRFPerson FOREIGN KEY (RFPerson) REFERENCES tblPerson(IDPerson)
-);
-
-CREATE UNIQUE INDEX IDXtblBehandlungPendentIDBehPendent ON tblBehandlungPendent (IDBehPendent);
-CREATE INDEX IDXtblBehandlungPendentRFBehandlung ON tblBehandlungPendent (RFBehandlung);
-CREATE INDEX IDXtblBehandlungPendentRFPerson ON tblBehandlungPendent (RFPerson);
+CREATE INDEX IDXtblBehandlungRFPerson ON tblBehandlung (RFPerson);
 
 VACUUM;

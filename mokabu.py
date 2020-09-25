@@ -16,6 +16,9 @@ class MoKaBu:
         dbc.execute('SELECT SQLITE_VERSION()')
         data = dbc.fetchone()
         print("SQLite version: %s" % data)
+        #One way of permanently turning on foreign_keys by default is to inject the following line into ~/.sqliterc: PRAGMA foreign_keys = ON;
+        dbc.execute("PRAGMA foreign_keys = 1")
+        #dbc.execute("PRAGMA foreign_keys")
     except lite.Error as e:
         print("Error %s:" % e.args[0])
         sys.exit(1)
