@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+#https://www.w3schools.com/sql/sql_join.asp
 import sqlite3 as lite
 import sys
 
@@ -73,6 +74,10 @@ class MoKaBu:
         print(row)
       for row in dbc.execute("SELECT datetime(Datum,'unixepoch'),* FROM tblBehandlung"):
         print(row)
+      for row in dbc.execute("SELECT tblBehandlung.*, tblPerson.* FROM tblBehandlung INNER JOIN tblPerson ON tblBehandlung.RFPerson=tblPerson.IDPerson;"):
+        print(row)
+
+
     except lite.Error as e:
         print("Error %s:" % e.args[0])
 
