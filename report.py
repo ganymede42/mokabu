@@ -1,141 +1,103 @@
 #!/usr/bin/python3
 import time
-from reportlab.lib.enums import TA_JUSTIFY
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
+#import reportlab as rl
+import reportlab.lib as rll
+import reportlab.platypus as rlp
+import reportlab.lib.units as rlu
+import reportlab.lib.styles as rls
+import reportlab.platypus as rlp
+import reportlab.lib.enums as rle
+import reportlab.lib.pagesizes as rlps
+
+#from reportlab.lib.enums import TA_JUSTIFY
+#from reportlab.lib.pagesizes import letter
+#from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+#from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+#from reportlab.lib.units import inch
 class Invoice():
-  def init(self):
-    doc = SimpleDocTemplate("form_letter.pdf",pagesize=letter,
+  def init(self,fn='invoice.pdf'):
+    styles=rls.getSampleStyleSheet()
+    styles.add(rls.ParagraphStyle(name='Justify', alignment=rle.TA_JUSTIFY))
+    styles.add(rls.ParagraphStyle(name='Right', alignment=rle.TA_RIGHT))
+    styles.add(rls.ParagraphStyle(name='Center', alignment=rle.TA_CENTER))
+
+    doc = rlp.SimpleDocTemplate(fn,pagesize=rlps.A4,
                             rightMargin=72,leftMargin=72,
-                            topMargin=72,bottomMargin=18)
+                            topMargin=22,bottomMargin=18)
     Story=[]
-    logo = "python_logo.png"
-    magName = "Pythonista"
-    issueNum = 12
-    subPrice = "99.00"
-    limitedDate = "03/05/2010"
-    freeGift = "tin foil hat"
-
-    formatted_time = time.ctime()
-    full_name = "Mike Driscoll"
-    address_parts = ["411 State St.", "Marshalltown, IA 50158"]
-
-    im = Image(logo, 2*inch, 2*inch)
+    im = rlp.Image("Logo_Monika.png", 8*rlu.cm, 4*rlu.cm)
+    im.hAlign='RIGHT'
     Story.append(im)
-
-    styles=getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY))
-    ptext = '<font size="12">%s</font>' % formatted_time
-
-    Story.append(Paragraph(ptext, styles["Normal"]))
-    Story.append(Spacer(1, 12))
-
-    # Create return address
-    ptext = '<font size="12">%s</font>' % full_name
-    Story.append(Paragraph(ptext, styles["Normal"]))       
-    for part in address_parts:
-        ptext = '<font size="12">%s</font>' % part.strip()
-        Story.append(Paragraph(ptext, styles["Normal"]))   
-
-    Story.append(Spacer(1, 12))
-    ptext = '<font size="12">Dear %s:</font>' % full_name.split()[0].strip()
-    Story.append(Paragraph(ptext, styles["Normal"]))
-    Story.append(Spacer(1, 12))
-
-    ptext = '<font size="12">We would like to welcome you to our subscriber base for %s Magazine! \
-            You will receive %s issues at the excellent introductory price of $%s. Please respond by\
-            %s to start receiving your subscription and get the following free gift: %s.</font>' % (magName, 
-                                                                                                    issueNum,
-                                                                                                    subPrice,
-                                                                                                    limitedDate,
-                                                                                                    freeGift)
-    Story.append(Paragraph(ptext, styles["Justify"]))
-    Story.append(Spacer(1, 12))
+    txt='''<font size="7"><b>Monika Kast Perry</b><br/>
+Dr. phil., Fachpsychologin<br/>
+für Kinder- & Jugendpsychologie FSP<br/>
+eidg. anerkannte Psychotherapeutin.<br/>
+Albisstrasse 11 · 8038 Zürich · +41 76 335 72 79<br/>
+monika.kast-perry@psychologie.ch · praxis-weiterkommen.com</font>'''
+    Story.append(rlp.Paragraph(txt,styles["Right"]))
 
 
-    ptext = '<font size="12">Thank you very much and we look forward to serving you.</font>'
-    Story.append(Paragraph(ptext, styles["Justify"]))
-    Story.append(Spacer(1, 12))
-    ptext = '<font size="12">Sincerely,</font>'
-    Story.append(Paragraph(ptext, styles["Normal"]))
-    Story.append(Spacer(1, 48))
-    ptext = '<font size="12">Ima Sucker</font>'
-    Story.append(Paragraph(ptext, styles["Normal"]))
-    Story.append(Spacer(1, 12))
+    txt='''
+Familie<br/>
+Cunte Cristine & Fonte Miguel<br/>
+Binzacherweg 20<br/>
+8166 Niderweningen'''
+    Story.append(rlp.Spacer(1, 36))
+    Story.append(rlp.Paragraph(txt,styles["Normal"]))
+    txt='''
+Zürich, 25.01.2020'''
+    Story.append(rlp.Spacer(1, 36))
+    Story.append(rlp.Paragraph(txt,styles["Normal"]))
+    txt='''Rechnung für<br/>
+<br/>
+<b>Cunte Rui, geb: 26.03.2013</b>'''
+    Story.append(rlp.Paragraph(txt,styles["Normal"]))
+
+    Story.append(rlp.Spacer(1, 12))
+    data=[['00','01','02','03','04'],
+     ['10','11','12','13','14'],
+     ['20','21','22','23','24'],
+     ['30','31','32','33','34']]
+    t=rlp.Table(data)
+    t.setStyle(rlp.TableStyle([('BACKGROUND',(1,1),(-2,-2),rll.colors.green),
+                           ('TEXTCOLOR',(0,0),(1,-1),rll.colors.red)]))
+    Story.append(t)
+
+    txt='''
+    Daten: 	Minuten / Ansatz pro h: 	Kosten:	Total:<br/>
+17.01.2020	60 min / 180.00 SFr.	SFr. 180.00	SFr. 180.00'''
+    Story.append(rlp.Spacer(1, 12))
+    Story.append(rlp.Paragraph(txt,styles["Normal"]))
+    txt='''Ich bitte Sie, den Betrag von SFr. 180.00 auf folgendes Konto zu überweisen:<br/>
+St. Galler Kantonalbank, IBAN-Nr. CH60 0078 1622 4188 6200 0<br/>
+<br/>
+Monika Kast Perry<br/>
+Praxis weiterkommen<br/>
+Albisstrasse 11<br/>
+8038 Zürich'''
+    Story.append(rlp.Spacer(1, 12))
+    Story.append(rlp.Paragraph(txt,styles["Normal"]))
+    txt='''Herzlichen Dank und liebe Grüsse'''
+    Story.append(rlp.Spacer(1, 12))
+    Story.append(rlp.Paragraph(txt,styles["Normal"]))
+    Story.append(rlp.Spacer(1, 12))
+    im = rlp.Image("signature.png", 8*rlu.cm, 2*rlu.cm)
+    im.hAlign='CENTER'
+    Story.append(im)
+    txt='''Monika Kast Perry'''
+    Story.append(rlp.Paragraph(txt,styles["Center"]))
+    txt='PS: Es kann über die Zusatzversicherung Ihrer Krankenkasse abgerechnet werden.'
     doc.build(Story)
 
-        pass
 
-      def add(self,row):#!/usr/bin/python3
-
-    import time
-    from reportlab.lib.enums import TA_JUSTIFY
-    from reportlab.lib.pagesizes import letter
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import inch
-
-    doc = SimpleDocTemplate("form_letter.pdf",pagesize=letter,
-                            rightMargin=72,leftMargin=72,
-                            topMargin=72,bottomMargin=18)
-    Story=[]
-    logo = "python_logo.png"
-    magName = "Pythonista"
-    issueNum = 12
-    subPrice = "99.00"
-    limitedDate = "03/05/2010"
-    freeGift = "tin foil hat"
-
-    formatted_time = time.ctime()
-    full_name = "Mike Driscoll"
-    address_parts = ["411 State St.", "Marshalltown, IA 50158"]
-
-    im = Image(logo, 2*inch, 2*inch)
-    Story.append(im)
-
-    styles=getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY))
-    ptext = '<font size="12">%s</font>' % formatted_time
-
-    Story.append(Paragraph(ptext, styles["Normal"]))
-    Story.append(Spacer(1, 12))
-
-    # Create return address
-    ptext = '<font size="12">%s</font>' % full_name
-    Story.append(Paragraph(ptext, styles["Normal"]))       
-    for part in address_parts:
-        ptext = '<font size="12">%s</font>' % part.strip()
-        Story.append(Paragraph(ptext, styles["Normal"]))   
-
-    Story.append(Spacer(1, 12))
-    ptext = '<font size="12">Dear %s:</font>' % full_name.split()[0].strip()
-    Story.append(Paragraph(ptext, styles["Normal"]))
-    Story.append(Spacer(1, 12))
-
-    ptext = '<font size="12">We would like to welcome you to our subscriber base for %s Magazine! \
-            You will receive %s issues at the excellent introductory price of $%s. Please respond by\
-            %s to start receiving your subscription and get the following free gift: %s.</font>' % (magName, 
-                                                                                                    issueNum,
-                                                                                                    subPrice,
-                                                                                                    limitedDate,
-                                                                                                    freeGift)
-    Story.append(Paragraph(ptext, styles["Justify"]))
-    Story.append(Spacer(1, 12))
-
-
-    ptext = '<font size="12">Thank you very much and we look forward to serving you.</font>'
-    Story.append(Paragraph(ptext, styles["Justify"]))
-    Story.append(Spacer(1, 12))
-    ptext = '<font size="12">Sincerely,</font>'
-    Story.append(Paragraph(ptext, styles["Normal"]))
-    Story.append(Spacer(1, 48))
-    ptext = '<font size="12">Ima Sucker</font>'
-    Story.append(Paragraph(ptext, styles["Normal"]))
-    Story.append(Spacer(1, 12))
-    doc.build(Story)
+  def add(self,row):
     pass
 
   def finalize(self):
     pass
+
+
+if __name__ == '__main__':
+  rep=Invoice()
+  rep.init()
+  rep.finalize()
