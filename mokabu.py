@@ -4,6 +4,7 @@
 #https://www.w3schools.com/sql/sql_join.asp
 import sqlite3 as lite
 import sys
+import report
 
 class MoKaBu:
 
@@ -38,49 +39,45 @@ class MoKaBu:
       fh=open(schema,'r')
       dbc.executescript(fh.read())
     except lite.Error as e:
-        print("1Error %s:" % e.args[0])
+        print(schema+" Error %s:" % e.args[0])
 
   def populate(self):
     dbc=self.dbc
     try:
-      #dbc.execute("insert into tblPerson values (NULL,'Anrede','Nachname','Vorname','Adresse',1111,'Ort',1234,5678,'eMail','Bemerkung')")
-      #dbc.execute("insert into tblPerson values ('IDPerson','Anrede','Nachname','Vorname','Adresse','PLZ','Ort','Telefon','Mobile','eMail','Bemerkung')")
-
-      dataLst=((None,'Anrede','Nachname','Vorname','Adresse',1111,'Ort','0794269945','0654269945','eMail','Bemerkung'),
-               (None,'Herr','Zamofing','Thierry','Weihermattstrasse 11a',5242,'Birr','0763399148',None,'th.zamofing@gmail.com','Bemerkung'),
-               (None,'Frau','Kast','Monika','Albisstrasse 12',8000,'Zürich','0785561234',None,'eMail','Bemerkung'),
-               (None,'Herr','Meier','Roger','Fluhweg 10',5430,'Wettingen','0763395416','0654269945','eMail','Bemerkung'))
-      #for data in dataLst:
-      #  dbc.execute("INSERT INTO tblPerson VALUES "+str(data).replace('None','NULL'))
-
-      dbc.executemany("INSERT INTO tblPerson VALUES (?,?,?,?,?,?,?,?,?,?,?)",dataLst)
-      #dataLst=(('Anrede','Nachname','Vorname','Adresse',1111,'Ort',1234,5678,'eMail','Bemerkung'),
-      #         ('Herr','Zamofing','Thierry','Weihermattstrasse 11a','0763399148','Birr',1234,5678,'eMail','Bemerkung'),
-      #         ('Frau','Kast','Monika','Albisstrasse 12',8000,'Zürich',1234,5678,'eMail','Bemerkung'),
-      #         ('Herr','Meier','Roger','Fluhweg 10',5430,'Wettingen','0763399148',5678,'eMail','Bemerkung'))
-      #dbc.executemany("INSERT INTO tblPerson(Anrede,Nachname,Vorname,Adresse,PLZ,Ort,Telefon,Mobile,eMail,Bemerkung) VALUES (?,?,?,?,?,?,?,?,?,?)",dataLst)
-
-
-      populate='populate.sql'
+      #populate='populate.sql'
+      populate='2020_Klienten.sql'
       dbc=self.dbc
       fh=open(populate,'r')
       dbc.executescript(fh.read())
-
-
       self.db.commit()
+    except lite.Error as e:
+      print(populate+" Error %s:"%e.args[0])
+
+    try:
       for row in dbc.execute('SELECT * FROM tblPerson'):
         print(row)
       for row in dbc.execute('SELECT * FROM tblBehandlung'):
         print(row)
-      for row in dbc.execute("SELECT datetime(Datum,'unixepoch'),* FROM tblBehandlung"):
+      for row in dbc.execute("SELECT datetime(datBehandlung,'unixepoch'),* FROM tblBehandlung"):
         print(row)
-      for row in dbc.execute("SELECT tblBehandlung.*, tblPerson.* FROM tblBehandlung INNER JOIN tblPerson ON tblBehandlung.RFPerson=tblPerson.IDPerson;"):
+      print('xxx')
+      for row in dbc.execute("SELECT tblBehandlung.*, tblPerson.* FROM tblBehandlung LEFT JOIN tblPerson ON tblBehandlung.fkPerson=tblPerson.pkPerson;"):
         print(row)
-
-
     except lite.Error as e:
-        print("Error %s:" % e.args[0])
+        print("SQL tests Error %s:" % e.args[0])
 
+  def report_invoice(self):
+    dbc=self.dbc
+    sql='''SELECT tp.* ,tr.pkRechnung,tr.datRechnung,tb.Dauer,tb.Stundenansatz,
+tb.Dauer*tb.Stundenansatz/60 AS tot
+FROM tblBehandlung tb LEFT JOIN tblRechnung tr ON tb.fkRechnung=tr.pkRechnung LEFT JOIN tblPerson tp on tb.fkPerson =tp.pkPerson
+ORDER BY tr.pkRechnung, tb.datBehandlung'''
+
+    repIvc=report.Invoice()
+
+    for row in dbc.execute(sql):
+      print(row)
+      repIvc.add(row)
 
 
 
@@ -88,5 +85,6 @@ mkb=MoKaBu('mokabu.db')
 #mkb.open()
 mkb.reset()
 mkb.populate()
+mkb.report_invoice()
 mkb.close()
 
