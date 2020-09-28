@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 import time
-#import reportlab as rl
+import reportlab as rl
 import reportlab.lib as rll
 import reportlab.platypus as rlp
 import reportlab.lib.units as rlu
@@ -8,23 +8,54 @@ import reportlab.lib.styles as rls
 import reportlab.platypus as rlp
 import reportlab.lib.enums as rle
 import reportlab.lib.pagesizes as rlps
+import reportlab.pdfgen as rlpg
+import reportlab.pdfbase as rlpb
+import reportlab.pdfbase.ttfonts #else not visible
 
 #from reportlab.lib.enums import TA_JUSTIFY
 #from reportlab.lib.pagesizes import letter
 #from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
 #from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 #from reportlab.lib.units import inch
+class MyDocTemplate(rlp.SimpleDocTemplate):
+  def __init__(self,fn,**kw):
+    rlp.SimpleDocTemplate.__init__(self,fn,**kw)
+
+  def beforeDocument(self):
+    canvas=self.canv
+    canvas.setLineWidth(.3)
+    sz=rlps.A4
+    l=.8*rlu.cm;r=sz[0]-.8*rlu.cm;t=sz[1]-.8*rlu.cm;b=.8*rlu.cm
+    canvas.line(l,t,r,t)
+    canvas.line(l,b,r,b)
+
 class Invoice():
   def init(self,fn='invoice.pdf'):
+    #dimension by default 1/72 inch
+    #canvas=rlpg.canvas.Canvas("form.pdf",pagesize=rlps.A4)
+    #canvas.setLineWidth(.3)
+    #canvas.line(1*rlu.cm,760,20*rlu.cm,760)
+    #canvas.line(10,747,580,747)
+    #canvas.setFont('Helvetica',12)
+    #canvas.drawString(30,800,'1OFFICIAL COMMUNIQUE')
+    #rlpb.pdfmetrics.registerFont(rlpb.ttfonts.TTFont('Vera', 'Vera.ttf'))
+    #canvas.setFont('Vera',10)
+    #canvas.drawString(30,780,'2OFFICIAL COMMUNIQUE')
+    #canvas.showPage() #new drawing on new page
+    #canvas.drawString(30,780,'3OFFICIAL COMMUNIQUE')
+    #canvas.save()
+
     styles=rls.getSampleStyleSheet()
     styles.add(rls.ParagraphStyle(name='Justify', alignment=rle.TA_JUSTIFY))
     styles.add(rls.ParagraphStyle(name='Right', alignment=rle.TA_RIGHT))
     styles.add(rls.ParagraphStyle(name='Center', alignment=rle.TA_CENTER))
 
-    doc = rlp.SimpleDocTemplate(fn,pagesize=rlps.A4,
-                            rightMargin=72,leftMargin=72,
-                            topMargin=22,bottomMargin=18)
+    #doc = rlp.SimpleDocTemplate(fn,pagesize=rlps.A4,
+    doc = MyDocTemplate(fn,pagesize=rlps.A4,
+                        rightMargin=2*rlu.cm,leftMargin=2*rlu.cm,
+                        topMargin=1*rlu.cm,bottomMargin=1*rlu.cm)
     Story=[]
+    Story.append(rlp.Spacer(1, -1*rlu.cm))
     im = rlp.Image("Logo_Monika.png", 8*rlu.cm, 4*rlu.cm)
     im.hAlign='RIGHT'
     Story.append(im)
@@ -88,6 +119,7 @@ Albisstrasse 11<br/>
     Story.append(rlp.Paragraph(txt,styles["Center"]))
     txt='PS: Es kann über die Zusatzversicherung Ihrer Krankenkasse abgerechnet werden.'
     doc.build(Story)
+    pass
 
 
   def add(self,row):
