@@ -23,16 +23,32 @@ class MyDocTemplate(rlp.SimpleDocTemplate):
 
   def beforeDocument(self):
     canvas=self.canv
-    canvas.setLineWidth(.3)
-    sz=rlps.A4
-    l=.8*rlu.cm;r=sz[0]-.8*rlu.cm;t=sz[1]-.8*rlu.cm;b=.8*rlu.cm
-    canvas.line(l,t,r,t)
-    canvas.line(l,b,r,b)
 
 class Invoice():
   def init(self,fn='invoice.pdf'):
     #dimension by default 1/72 inch
-    #canvas=rlpg.canvas.Canvas("form.pdf",pagesize=rlps.A4)
+    self.canvas=canvas=rlpg.canvas.Canvas(fn,pagesize=rlps.A4)
+    self.styles=styles=rls.getSampleStyleSheet()
+    styles.add(rls.ParagraphStyle(name='Justify', alignment=rle.TA_JUSTIFY))
+    styles.add(rls.ParagraphStyle(name='Right', alignment=rle.TA_RIGHT))
+    styles.add(rls.ParagraphStyle(name='Center', alignment=rle.TA_CENTER))
+
+    pass
+
+
+  def add(self,klient,datRng,behandlungen):
+    canvas=self.canvas
+    styles=self.styles
+    sz=rlps.A4
+    l=.8*rlu.cm;
+    r=sz[0]-.8*rlu.cm;
+    t=sz[1]-.8*rlu.cm;
+    b=.8*rlu.cm
+    canvas.setLineWidth(.3)
+    canvas.line(l,t,r,t)
+    canvas.line(l,b,r,b)
+    frm=rlp.Frame(l,b,r-l,t-b,showBoundary=1)
+
     #canvas.setLineWidth(.3)
     #canvas.line(1*rlu.cm,760,20*rlu.cm,760)
     #canvas.line(10,747,580,747)
@@ -45,91 +61,108 @@ class Invoice():
     #canvas.drawString(30,780,'3OFFICIAL COMMUNIQUE')
     #canvas.save()
 
-    styles=rls.getSampleStyleSheet()
-    styles.add(rls.ParagraphStyle(name='Justify', alignment=rle.TA_JUSTIFY))
-    styles.add(rls.ParagraphStyle(name='Right', alignment=rle.TA_RIGHT))
-    styles.add(rls.ParagraphStyle(name='Center', alignment=rle.TA_CENTER))
-
     #doc = rlp.SimpleDocTemplate(fn,pagesize=rlps.A4,
-    doc = MyDocTemplate(fn,pagesize=rlps.A4,
-                        rightMargin=2*rlu.cm,leftMargin=2*rlu.cm,
-                        topMargin=1*rlu.cm,bottomMargin=1*rlu.cm)
-    Story=[]
-    Story.append(rlp.Spacer(1, -1*rlu.cm))
-    im = rlp.Image("Logo_Monika.png", 8*rlu.cm, 4*rlu.cm)
+    story=[]
+    im=rlp.Image("Logo_Monika.png",7*rlu.cm,2*rlu.cm)
     im.hAlign='RIGHT'
-    Story.append(im)
+    story.append(im)
+    story.append(rlp.Spacer(1,12))
     txt='''<font size="7"><b>Monika Kast Perry</b><br/>
-Dr. phil., Fachpsychologin<br/>
-für Kinder- & Jugendpsychologie FSP<br/>
-eidg. anerkannte Psychotherapeutin.<br/>
-Albisstrasse 11 · 8038 Zürich · +41 76 335 72 79<br/>
-monika.kast-perry@psychologie.ch · praxis-weiterkommen.com</font>'''
-    Story.append(rlp.Paragraph(txt,styles["Right"]))
-
+    Dr. phil., Fachpsychologin<br/>
+    für Kinder- & Jugendpsychologie FSP<br/>
+    eidg. anerkannte Psychotherapeutin.<br/>
+    Albisstrasse 11 · 8038 Zürich · +41 76 335 72 79<br/>
+    monika.kast-perry@psychologie.ch · praxis-weiterkommen.com</font>'''
+    story.append(rlp.Paragraph(txt,styles["Right"]))
 
     txt='''
-Familie<br/>
-Cunte Cristine & Fonte Miguel<br/>
-Binzacherweg 20<br/>
-8166 Niderweningen'''
-    Story.append(rlp.Spacer(1, 36))
-    Story.append(rlp.Paragraph(txt,styles["Normal"]))
-    txt='''
-Zürich, 25.01.2020'''
-    Story.append(rlp.Spacer(1, 36))
-    Story.append(rlp.Paragraph(txt,styles["Normal"]))
+    %s<br/>
+    %s %s<br/>'''%klient[0:3]
+    for i in range(3,6):
+      adr=klient[i]
+      if len(adr)>0:
+        txt+=adr+'<br/>'
+    txt+='%s %s<br/>'''%klient[6:8]
+
+    story.append(rlp.Spacer(1,36))
+    story.append(rlp.Paragraph(txt,styles["Normal"]))
+    txt='Zürich, %s'%datRng
+    story.append(rlp.Spacer(1,36))
+    story.append(rlp.Paragraph(txt,styles["Normal"]))
+    story.append(rlp.Spacer(1,36))
     txt='''Rechnung für<br/>
-<br/>
-<b>Cunte Rui, geb: 26.03.2013</b>'''
-    Story.append(rlp.Paragraph(txt,styles["Normal"]))
+    <br/>
+    <b>%s %s, geb: %s'''%(klient[8:11])
+    if len(klient[11])>0: txt+='AHV-Nr: %s'%klient[11]
+    txt+='</b>'
+    story.append(rlp.Paragraph(txt,styles["Normal"]))
 
-    Story.append(rlp.Spacer(1, 12))
-    data=[['00','01','02','03','04'],
-     ['10','11','12','13','14'],
-     ['20','21','22','23','24'],
-     ['30','31','32','33','34']]
+    story.append(rlp.Spacer(1,12))
+    #data=[['00','01','02','03','04'],
+    #      ['10','11','12','13','14'],
+    #      ['20','21','22','23','24'],
+    #      ['30','31','32','33','34']]
+
+    #t=rlp.Table(data)
+    #t.setStyle(rlp.TableStyle([('BACKGROUND',(1,1),(-2,-2),rll.colors.green),
+    #                           ('TEXTCOLOR',(0,0),(1,-1),rll.colors.red)]))
+    #story.append(t)
+
+    data=[('Datum','Stundenansatz','Minuten','Bemerkung','TarifZif','Total',)]
+    totSum=0.
+    for datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif in behandlungen:
+      tot=Stundenansatz*Dauer/60
+      totSum+=tot
+      data.append((datBehandlung,'%.2f'%Stundenansatz,'%d Min'%Dauer,Bemerkung,TarZif,'%.2f'%tot))
+    data.append(('','','','','','%.2f'%totSum))
+    #data.append(('','','','','',rlp.Paragraph('<b>%.2f</b>'%totSum,styles['Center'])))
     t=rlp.Table(data)
-    t.setStyle(rlp.TableStyle([('BACKGROUND',(1,1),(-2,-2),rll.colors.green),
-                           ('TEXTCOLOR',(0,0),(1,-1),rll.colors.red)]))
-    Story.append(t)
+    t.hAlign='LEFT'
+    t.setStyle(rlp.TableStyle([('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black),
+                               ('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black)]))
 
-    txt='''
-    Daten: 	Minuten / Ansatz pro h: 	Kosten:	Total:<br/>
-17.01.2020	60 min / 180.00 SFr.	SFr. 180.00	SFr. 180.00'''
-    Story.append(rlp.Spacer(1, 12))
-    Story.append(rlp.Paragraph(txt,styles["Normal"]))
-    txt='''Ich bitte Sie, den Betrag von SFr. 180.00 auf folgendes Konto zu überweisen:<br/>
-St. Galler Kantonalbank, IBAN-Nr. CH60 0078 1622 4188 6200 0<br/>
-<br/>
-Monika Kast Perry<br/>
-Praxis weiterkommen<br/>
-Albisstrasse 11<br/>
-8038 Zürich'''
-    Story.append(rlp.Spacer(1, 12))
-    Story.append(rlp.Paragraph(txt,styles["Normal"]))
+    story.append(t)
+
+    story.append(rlp.Spacer(1,12))
+    txt='''Ich bitte Sie, den Betrag von SFr. %.2f innert 30 Tagen auf folgendes Konto zu überweisen:<br/>
+    St. Galler Kantonalbank, IBAN-Nr. CH60 0078 1622 4188 6200 0<br/>
+    <br/>
+    Monika Kast Perry<br/>
+    Praxis weiterkommen<br/>
+    Albisstrasse 11<br/>
+    8038 Zürich'''%totSum
+    story.append(rlp.Spacer(1,12))
+    story.append(rlp.Paragraph(txt,styles["Normal"]))
     txt='''Herzlichen Dank und liebe Grüsse'''
-    Story.append(rlp.Spacer(1, 12))
-    Story.append(rlp.Paragraph(txt,styles["Normal"]))
-    Story.append(rlp.Spacer(1, 12))
-    im = rlp.Image("signature.png", 8*rlu.cm, 2*rlu.cm)
+    story.append(rlp.Spacer(1,12))
+    story.append(rlp.Paragraph(txt,styles["Normal"]))
+    story.append(rlp.Spacer(1,12))
+    im=rlp.Image("signature.png",8*rlu.cm,2*rlu.cm)
     im.hAlign='CENTER'
-    Story.append(im)
+    story.append(im)
     txt='''Monika Kast Perry'''
-    Story.append(rlp.Paragraph(txt,styles["Center"]))
+    story.append(rlp.Paragraph(txt,styles["Center"]))
     txt='PS: Es kann über die Zusatzversicherung Ihrer Krankenkasse abgerechnet werden.'
-    doc.build(Story)
-    pass
-
-
-  def add(self,row):
-    pass
+    frm.addFromList(story,canvas)
+    canvas.showPage()
 
   def finalize(self):
+    self.canvas.save()
     pass
 
 
 if __name__ == '__main__':
   rep=Invoice()
   rep.init()
+  lstKlient=\
+    (('Frau ', 'Saki', 'Karakurt', 'Meierwiesenstrasse 24', '', '', '8107', 'Buchs', 'Bayraktar', 'Aras', '15.02.2012', ''),
+     ('Familie', 'Preisig U. &', 'C.', 'Sihlaustr. 3', '', '', '8134', 'Adliswil', 'Radic Baumgartner', 'Ksenija', '18.06.1975', ''),)
+  lstDatRng=\
+    (('17.03.2020'),('26.06.2020'),)
+  lstBeh=\
+      ((('15.05.2020', 142.0, 60.0, '', ''),('22.05.2020', 142.0, 60.0, '', ''),('29.05.2020', 142.0, 60.0, '', ''),('03.06.2020', 142.0, 60.0, '', ''),('12.06.2020', 142.0, 60.0, '', '')),
+       (('19.06.2020', 180.0, 60.0, '', ''),('31.07.2020', 180.0, 60.0, '', ''),('31.07.2020', 180.0, 60.0, '', ''),('06.08.2020', 180.0, 60.0, '', '')))
+
+  for i in range(2):
+    rep.add(lstKlient[i],lstDatRng[i],lstBeh[i])
   rep.finalize()
