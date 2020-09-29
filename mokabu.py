@@ -5,7 +5,6 @@
 import sqlite3 as lite
 import sys
 import report
-
 class MoKaBu:
 
   def __init__(self,fn='mokabu.db'):
@@ -97,11 +96,20 @@ class MoKaBu:
     repIvc.finalize()
 
 
+if __name__=='__main__':
 
-mkb=MoKaBu('mokabu.db')
-#mkb.open()
-mkb.reset()
-mkb.populate()
-mkb.report_invoice()
-mkb.close()
+  mkb=MoKaBu('mokabu.db')
+  #mkb.open()
+  #mkb.reset()
+  #mkb.populate()
+  #mkb.report_invoice()
+
+  #import ui.App as uiApp
+  #uiApp.QtSqlApp()
+  #uiApp.startUI(mkb)
+
+  import qtgui
+  qtgui.MainApp(mkb)
+
+  mkb.close()
 

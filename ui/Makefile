@@ -7,7 +7,7 @@ RESOURCE_DIR = .#src/resources
 COMPILED_DIR = .#src/ui
 
 #UI files to compile
-UI_FILES = DlgTest2.ui  DlgTest.ui  WndKlienten.ui  WndMain.ui
+UI_FILES = DlgTest2.ui DlgTest.ui QDialog1.ui QDialog2.ui QDialog3.ui QMainWindow1.ui QWidget1.ui WndKlienten.ui WndMain.ui WndTest.ui
 
 #Qt resource files to compile
 RESOURCES = #images.qrc

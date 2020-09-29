@@ -6,31 +6,20 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>542</width>
-    <height>309</height>
+    <width>425</width>
+    <height>121</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MoKaBu</string>
   </property>
-  <widget class="QWidget" name="centralwidget">
-   <widget class="QMdiArea" name="mdiArea">
-    <property name="geometry">
-     <rect>
-      <x>29</x>
-      <y>20</y>
-      <width>351</width>
-      <height>241</height>
-     </rect>
-    </property>
-   </widget>
-  </widget>
+  <widget class="QWidget" name="centralwidget"/>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>542</width>
+     <width>425</width>
      <height>22</height>
     </rect>
    </property>
@@ -40,19 +29,20 @@
     </property>
     <addaction name="actionOpen_Database"/>
    </widget>
-   <widget class="QMenu" name="menuQueries">
+   <widget class="QMenu" name="menuBearbeiten">
     <property name="title">
-     <string>Queries</string>
+     <string>Bearbeiten</string>
     </property>
     <addaction name="actionKlienten"/>
     <addaction name="actionBehandlungen"/>
     <addaction name="actionRechnungen"/>
     <addaction name="actionOffene_Behandlungen"/>
    </widget>
-   <widget class="QMenu" name="menuReports">
+   <widget class="QMenu" name="menuBerichte">
     <property name="title">
-     <string>Reports</string>
+     <string>Berichte</string>
     </property>
+    <addaction name="actionBerRechnungen"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -61,8 +51,8 @@
     <addaction name="actionAbout_MoKaBu"/>
    </widget>
    <addaction name="menuddfa"/>
-   <addaction name="menuQueries"/>
-   <addaction name="menuReports"/>
+   <addaction name="menuBearbeiten"/>
+   <addaction name="menuBerichte"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -94,6 +84,11 @@
   <action name="actionOffene_Behandlungen">
    <property name="text">
     <string>Offene Behandlungen</string>
+   </property>
+  </action>
+  <action name="actionBerRechnungen">
+   <property name="text">
+    <string>Rechnungen</string>
    </property>
   </action>
  </widget>

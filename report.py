@@ -126,9 +126,10 @@ class Invoice():
     story.append(rlp.Spacer(100,12))
     story.append(rlp.Paragraph(txt,styN))
     story.append(rlp.Spacer(1,12))
-    im=rlp.Image("signature.png",8*rlu.cm,2*rlu.cm)
+    im=rlp.Image("signature.png",8*rlu.cm,8*139/735*rlu.cm) #735x139
     im.hAlign='CENTER'
     story.append(im)
+    story.append(rlp.Spacer(1,12))
     txt='''Monika Kast Perry'''
     story.append(rlp.Paragraph(txt,styC))
     txt='PS: Es kann über die Zusatzversicherung Ihrer Krankenkasse abgerechnet werden.'
