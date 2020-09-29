@@ -67,17 +67,34 @@ class MoKaBu:
         print("SQL tests Error %s:" % e.args[0])
 
   def report_invoice(self):
-    dbc=self.dbc
-    sql='''SELECT tp.* ,tr.pkRechnung,tr.datRechnung,tb.Dauer,tb.Stundenansatz,
-tb.Dauer*tb.Stundenansatz/60 AS tot
-FROM tblBehandlung tb LEFT JOIN tblRechnung tr ON tb.fkRechnung=tr.pkRechnung LEFT JOIN tblPerson tp on tb.fkPerson =tp.pkPerson
-ORDER BY tr.pkRechnung, tb.datBehandlung'''
+    db=self.db
+    dbcRng=self.dbc
+    dbcBeh=db.cursor()
+    sqlRng='''SELECT tr.pkRechnung,tr.datRechnung,RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,RngAdresse2,PLZ,Ort,Nachname,Vorname,datGeb,AHVNr
+    FROM tblRechnung tr LEFT JOIN tblPerson tp on tr.fkPerson=tp.pkPerson
+    ORDER BY tr.pkRechnung'''
+
+    sqlTplBeh='''SELECT datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif FROM tblBehandlung tb
+    WHERE tb.fkRechnung=%s
+    ORDER BY tb.datBehandlung'''
+
+#    sql='''SELECT tp.* ,tr.pkRechnung,tr.datRechnung,tb.Dauer,tb.Stundenansatz,
+#tb.Dauer*tb.Stundenansatz/60 AS tot
+#FROM tblBehandlung tb LEFT JOIN tblRechnung tr ON tb.fkRechnung=tr.pkRechnung LEFT JOIN tblPerson tp on tb.fkPerson =tp.pkPerson
+#ORDER BY tr.pkRechnung, tb.datBehandlung'''
 
     repIvc=report.Invoice()
+    repIvc.init()
 
-    for row in dbc.execute(sql):
-      print(row)
-      repIvc.add(row)
+    for recRng in dbcRng.execute(sqlRng):
+      print(recRng)
+      sqlBeh=sqlTplBeh%recRng[0]
+      dbcBeh=dbcBeh.execute(sqlBeh)
+      dBeh=dbcBeh.fetchall()
+      print(dBeh)
+      repIvc.add(recRng[2:],recRng[1],dBeh)
+
+    repIvc.finalize()
 
 
 

@@ -39,29 +39,20 @@ class Invoice():
   def add(self,klient,datRng,behandlungen):
     canvas=self.canvas
     styles=self.styles
+    styN=styles['Normal']
+    styR=styles['Right']
+    styC=styles["Center"]
+    styJ=styles["Justify"]
     sz=rlps.A4
-    l=.8*rlu.cm;
-    r=sz[0]-.8*rlu.cm;
-    t=sz[1]-.8*rlu.cm;
-    b=.8*rlu.cm
+    brd=(1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm)#l,r,t,b
+    l=brd[0];r=sz[0]-brd[1];t=sz[1]-brd[2];b=brd[3]
     canvas.setLineWidth(.3)
     canvas.line(l,t,r,t)
     canvas.line(l,b,r,b)
-    frm=rlp.Frame(l,b,r-l,t-b,showBoundary=1)
+    brd=(1.4*rlu.cm,1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm)#l,r,t,b
 
-    #canvas.setLineWidth(.3)
-    #canvas.line(1*rlu.cm,760,20*rlu.cm,760)
-    #canvas.line(10,747,580,747)
-    #canvas.setFont('Helvetica',12)
-    #canvas.drawString(30,800,'1OFFICIAL COMMUNIQUE')
-    #rlpb.pdfmetrics.registerFont(rlpb.ttfonts.TTFont('Vera', 'Vera.ttf'))
-    #canvas.setFont('Vera',10)
-    #canvas.drawString(30,780,'2OFFICIAL COMMUNIQUE')
-    #canvas.showPage() #new drawing on new page
-    #canvas.drawString(30,780,'3OFFICIAL COMMUNIQUE')
-    #canvas.save()
+    frm=rlp.Frame(brd[0],brd[3],sz[0]-brd[0]-brd[1],sz[1]-brd[2]-brd[3],showBoundary=0)
 
-    #doc = rlp.SimpleDocTemplate(fn,pagesize=rlps.A4,
     story=[]
     im=rlp.Image("Logo_Monika.png",7*rlu.cm,2*rlu.cm)
     im.hAlign='RIGHT'
@@ -73,7 +64,7 @@ class Invoice():
     eidg. anerkannte Psychotherapeutin.<br/>
     Albisstrasse 11 · 8038 Zürich · +41 76 335 72 79<br/>
     monika.kast-perry@psychologie.ch · praxis-weiterkommen.com</font>'''
-    story.append(rlp.Paragraph(txt,styles["Right"]))
+    story.append(rlp.Paragraph(txt,styR))
 
     txt='''
     %s<br/>
@@ -85,40 +76,38 @@ class Invoice():
     txt+='%s %s<br/>'''%klient[6:8]
 
     story.append(rlp.Spacer(1,36))
-    story.append(rlp.Paragraph(txt,styles["Normal"]))
+    story.append(rlp.Paragraph(txt,styN))
     txt='Zürich, %s'%datRng
     story.append(rlp.Spacer(1,36))
-    story.append(rlp.Paragraph(txt,styles["Normal"]))
+    story.append(rlp.Paragraph(txt,styN))
     story.append(rlp.Spacer(1,36))
     txt='''Rechnung für<br/>
     <br/>
     <b>%s %s, geb: %s'''%(klient[8:11])
-    if len(klient[11])>0: txt+='AHV-Nr: %s'%klient[11]
+    if len(klient[11])>0: txt+=' AHV-Nr: %s'%klient[11]
     txt+='</b>'
-    story.append(rlp.Paragraph(txt,styles["Normal"]))
+    story.append(rlp.Paragraph(txt,styN))
 
     story.append(rlp.Spacer(1,12))
-    #data=[['00','01','02','03','04'],
-    #      ['10','11','12','13','14'],
-    #      ['20','21','22','23','24'],
-    #      ['30','31','32','33','34']]
-
-    #t=rlp.Table(data)
-    #t.setStyle(rlp.TableStyle([('BACKGROUND',(1,1),(-2,-2),rll.colors.green),
-    #                           ('TEXTCOLOR',(0,0),(1,-1),rll.colors.red)]))
-    #story.append(t)
-
     data=[('Datum','Stundenansatz','Minuten','Bemerkung','TarifZif','Total',)]
     totSum=0.
     for datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif in behandlungen:
       tot=Stundenansatz*Dauer/60
       totSum+=tot
-      data.append((datBehandlung,'%.2f'%Stundenansatz,'%d Min'%Dauer,Bemerkung,TarZif,'%.2f'%tot))
-    data.append(('','','','','','%.2f'%totSum))
-    #data.append(('','','','','',rlp.Paragraph('<b>%.2f</b>'%totSum,styles['Center'])))
-    t=rlp.Table(data)
+      #pBemerkung=
+      pBemerkung=rlp.Paragraph('<font size="8">'+Bemerkung+'</font>',styN)
+      data.append((datBehandlung,'%.2f'%Stundenansatz,'%d Min'%Dauer,pBemerkung,TarZif,'%.2f'%tot))
+    #pTotSum='%.2f'%totSum
+    pTotSum=rlp.Paragraph('<b>%.2f</b>'%totSum,styR)
+    data.append(('','','','','',pTotSum))
+
+    t=rlp.Table(data,colWidths=(60,80,60,130,50,60,))
     t.hAlign='LEFT'
-    t.setStyle(rlp.TableStyle([('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black),
+    t.setStyle(rlp.TableStyle([#('INNERGRID',(0,0),(-1,-1),0.25,rll.colors.black),
+                               #('BOX',(0,0),(-1,-1),0.25,rll.colors.black),
+                               ('ALIGN',(0,0),(0,0),'CENTER'),
+                               ('ALIGN',(1,0),(2,-1),'RIGHT'),
+                               ('ALIGN',(5,0),(5,-1),'RIGHT'),
                                ('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black)]))
 
     story.append(t)
@@ -132,19 +121,85 @@ class Invoice():
     Albisstrasse 11<br/>
     8038 Zürich'''%totSum
     story.append(rlp.Spacer(1,12))
-    story.append(rlp.Paragraph(txt,styles["Normal"]))
+    story.append(rlp.Paragraph(txt,styN))
     txt='''Herzlichen Dank und liebe Grüsse'''
-    story.append(rlp.Spacer(1,12))
-    story.append(rlp.Paragraph(txt,styles["Normal"]))
+    story.append(rlp.Spacer(100,12))
+    story.append(rlp.Paragraph(txt,styN))
     story.append(rlp.Spacer(1,12))
     im=rlp.Image("signature.png",8*rlu.cm,2*rlu.cm)
     im.hAlign='CENTER'
     story.append(im)
     txt='''Monika Kast Perry'''
-    story.append(rlp.Paragraph(txt,styles["Center"]))
+    story.append(rlp.Paragraph(txt,styC))
     txt='PS: Es kann über die Zusatzversicherung Ihrer Krankenkasse abgerechnet werden.'
     frm.addFromList(story,canvas)
     canvas.showPage()
+
+  def playground(self):
+    lorIps='Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et'
+    canvas=self.canvas
+    styles=self.styles
+    styN=styles['Normal']
+    styC=styles["Center"]
+    styJ=styles["Justify"]
+    sz=rlps.A4
+    brd=(1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm)#l,r,t,b
+    l=brd[0];r=sz[0]-brd[1];t=sz[1]-brd[2];b=brd[3]
+    canvas.setLineWidth(.3)
+    canvas.line(l,t,r,t)
+    canvas.line(l,b,r,b)
+    brd=(1.4*rlu.cm,1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm)#l,r,t,b
+
+    styT=rls.ParagraphStyle(name='Test',fontSize=6,leading=8,backColor='yellow',alignment=rle.TA_CENTER)
+    styT=rls.ParagraphStyle(name='Test',fontSize=6,leading=8,backColor='yellow',leftIndent=50,endDots='_.,',spaceBefore=20,alignment=rle.TA_LEFT)
+    #styles.add(rls.ParagraphStyle(name='Center', alignment=rle.TA_CENTER))
+
+    story=[]
+    story.append(rlp.Paragraph(lorIps,styN))
+    story.append(rlp.Paragraph(lorIps,styC))
+    story.append(rlp.Paragraph(lorIps,styJ))
+
+    frm=rlp.Frame(brd[0],brd[3],sz[0]-brd[0]-brd[1],sz[1]-brd[2]-brd[3],showBoundary=1)
+    frm.addFromList(story,canvas)
+
+    story=[]
+    story.append(rlp.Paragraph(lorIps,styT))
+    story.append(rlp.Paragraph('ABCD',styJ))
+    story.append(rlp.Paragraph('ABCD',styT))
+    story.append(rlp.Paragraph('ABCD',styJ))
+    r=list(range(10))
+    data=list();
+    for i in range(5):
+      data.append(r)
+    t=rlp.Table(data)
+    t.hAlign='LEFT'
+    t.setStyle(rlp.TableStyle([('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black),
+                               ('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black)]))
+    story.append(t)
+    story.append(rlp.Paragraph('ABCD',styJ))
+    cw=tuple(range(15,40,2));cw=cw[:10]
+    t=rlp.Table(data,colWidths=cw)
+    t.hAlign='LEFT'
+    t.setStyle(rlp.TableStyle([('ALIGN',(1,1),(-2,-2),'RIGHT'),
+                           ('TEXTCOLOR',(1,1),(-2,-2),rll.colors.red),
+                           ('VALIGN',(0,0),(0,-1),'TOP'),
+                           ('TEXTCOLOR',(0,0),(0,-1),rll.colors.blue),
+                           ('ALIGN',(0,-1),(-1,-1),'CENTER'),
+                           ('VALIGN',(0,-1),(-1,-1),'MIDDLE'),
+                           ('TEXTCOLOR',(0,-1),(-1,-1),rll.colors.green),
+                           ('INNERGRID',(0,0),(-1,-1),0.25,rll.colors.black),
+                           ('BOX',(0,0),(-1,-1),0.25,rll.colors.black),
+                           ]))
+    story.append(t)
+    story.append(rlp.Paragraph('ABCD',styJ))
+    story.append(rlp.Paragraph('ABCD',styJ))
+    story.append(rlp.Paragraph('ABCD',styJ))
+    brd=(4*rlu.cm,7*rlu.cm,12*rlu.cm,2*rlu.cm)#l,r,t,b
+    frm=rlp.Frame(brd[0],brd[3],sz[0]-brd[0]-brd[1],sz[1]-brd[2]-brd[3],showBoundary=1)
+    frm.addFromList(story,canvas)
+    canvas.showPage()
+    pass
+
 
   def finalize(self):
     self.canvas.save()
@@ -165,4 +220,5 @@ if __name__ == '__main__':
 
   for i in range(2):
     rep.add(lstKlient[i],lstDatRng[i],lstBeh[i])
+  rep.playground()
   rep.finalize()
