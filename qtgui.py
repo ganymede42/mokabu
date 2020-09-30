@@ -55,24 +55,38 @@ class WndSqlTblView(qtw.QWidget):
     self.setWindowTitle(title)
 
     self.mdl=mdl = qtdb.QSqlTableModel()
-    mdl.setTable(sql)
+    if sql[:6].upper()==('SELECT'):
+      qry=qtdb.QSqlQuery(sql)
+      mdl.setQuery(qry)
+    else:
+      mdl.setTable(sql)
     mdl.setEditStrategy(qtdb.QSqlTableModel.OnFieldChange)
     mdl.select()
+    #mdl.setHeaderData(0,qtc.Qt.Horizontal,'pkPerson')
 
-    view = qtw.QTableView()
+    self.tbl=view=qtw.QTableView()
     view.setModel(mdl)
 
-    layout=qtw.QVBoxLayout()
-    layout.addWidget(view)
+    loV=qtw.QVBoxLayout(self)
+    loV.addWidget(view)
+
+    loH=qtw.QHBoxLayout()
+    loV.addLayout(loH)
 
     btn=qtw.QPushButton("Add a row")
     btn.clicked.connect(lambda:mdl.insertRows(mdl.rowCount(),1))
-    layout.addWidget(btn)
+    loH.addWidget(btn)
 
     btn=qtw.QPushButton("Del a row")
     btn.clicked.connect(lambda:mdl.removeRow(view.currentIndex().row()))
-    layout.addWidget(btn)
-    self.setLayout(layout)
+    loH.addWidget(btn)
+
+    btn=qtw.QPushButton("Debug")
+    btn.clicked.connect(self.debug)
+    loH.addWidget(btn)
+    #self.setLayout(loV)
+  def debug(self):
+    self.tbl
 
 #class WndMain(qtw.QMainWindow):
 class WndMain(qtw.QWidget):
@@ -117,18 +131,28 @@ class WndMain(qtw.QWidget):
 
   def OnTblClients(self):
     print("OnTblClients")
-    wnd=WndSqlTblView('TblClients:','tblPerson')
+    #wnd=WndSqlTblView('TblClients:','tblPerson')
     #wnd=WndSqlTblView('TblClients:','SELECT * FROM tblPerson')
+    wnd=WndSqlTblView('TblClients:',
+                      'SELECT RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,PLZ,Ort FROM tblPerson ORDER BY RngNachname,RngVorname',
+                      geometry=(100,100,1200,700))
+    #wnd.tbl.setColumnWidth(2,200)
+    for i in range(wnd.mdl.columnCount()):
+      wnd.tbl.resizeColumnToContents(i)
     WndChildAdd(wnd)
 
   def OnTblTreatments(self):
     print("aOnTblTreatments")
-    wnd=WndSqlTblView('TblTreatments:','tblBehandlung')
+    wnd=WndSqlTblView('TblTreatments:','tblBehandlung',geometry=(100,100,1200,700))
+    for i in range(wnd.mdl.columnCount()):
+      wnd.tbl.resizeColumnToContents(i)
     WndChildAdd(wnd)
 
   def OnTblInvoices(self):
     print("OnTblInvoices")
-    wnd=WndSqlTblView('TblInvoices:','tblRechnung')
+    wnd=WndSqlTblView('TblInvoices:','tblRechnung',geometry=(100,100,600,700))
+    for i in range(wnd.mdl.columnCount()):
+      wnd.tbl.resizeColumnToContents(i)
     WndChildAdd(wnd)
 
   def OnQryClient(self):
