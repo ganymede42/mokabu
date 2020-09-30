@@ -4,11 +4,19 @@
 import sys
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtCore as qtc
+import PyQt5.QtCore as qtc
+import PyQt5.QtSql as qtdb
 import mokabu
+
 
 def MainApp(mkb):
   app=qtw.QApplication(sys.argv)
   app.mkb=mkb
+  app.db=db=qtdb.QSqlDatabase.addDatabase('QSQLITE')
+  db.setDatabaseName('mokabu.db')
+  if not db.open():
+    print('failed to open db')
+
   mainWnd=WndMain() #must be assigned to a variable, else it 'selfsdestructs' before opening
   mainWnd.show()
   app.wndTop=set()
@@ -41,10 +49,30 @@ def AddMenuAction(widget,parentMenu,txt,func):
 #class WndSqlTblView(qtw.QDialog):
 class WndSqlTblView(qtw.QWidget):
 
-  def __init__(self,*args,**kwargs):
-    super(WndSqlTblView,self).__init__(*args,**kwargs)
-    self.setGeometry(50,50,500,300)
-    self.setWindowTitle("MoKaBu")
+  def __init__(self,title,sql,geometry=(100,100,1700,700)):
+    super(WndSqlTblView,self).__init__()
+    self.setGeometry(*geometry)
+    self.setWindowTitle(title)
+
+    self.mdl=mdl = qtdb.QSqlTableModel()
+    mdl.setTable(sql)
+    mdl.setEditStrategy(qtdb.QSqlTableModel.OnFieldChange)
+    mdl.select()
+
+    view = qtw.QTableView()
+    view.setModel(mdl)
+
+    layout=qtw.QVBoxLayout()
+    layout.addWidget(view)
+
+    btn=qtw.QPushButton("Add a row")
+    btn.clicked.connect(lambda:mdl.insertRows(mdl.rowCount(),1))
+    layout.addWidget(btn)
+
+    btn=qtw.QPushButton("Del a row")
+    btn.clicked.connect(lambda:mdl.removeRow(view.currentIndex().row()))
+    layout.addWidget(btn)
+    self.setLayout(layout)
 
 #class WndMain(qtw.QMainWindow):
 class WndMain(qtw.QWidget):
@@ -89,17 +117,18 @@ class WndMain(qtw.QWidget):
 
   def OnTblClients(self):
     print("OnTblClients")
-    wnd=WndSqlTblView()
+    wnd=WndSqlTblView('TblClients:','tblPerson')
+    #wnd=WndSqlTblView('TblClients:','SELECT * FROM tblPerson')
     WndChildAdd(wnd)
 
   def OnTblTreatments(self):
     print("aOnTblTreatments")
-    wnd=WndSqlTblView()
+    wnd=WndSqlTblView('TblTreatments:','tblBehandlung')
     WndChildAdd(wnd)
 
   def OnTblInvoices(self):
     print("OnTblInvoices")
-    wnd=WndSqlTblView()
+    wnd=WndSqlTblView('TblInvoices:','tblRechnung')
     WndChildAdd(wnd)
 
   def OnQryClient(self):
