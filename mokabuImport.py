@@ -106,7 +106,7 @@ class ImportData:
           rchDat=l.split(', ',1)[1]
         except BaseException as e:
           print(e, file=sys.stderr)
-          rchDat=''
+          rchDat=None
         break
       if len(l)>0:
         rchAdr.append(l)
@@ -120,7 +120,7 @@ class ImportData:
           geb,AHVNr=geb.split('AHV-Nr.')
           geb=geb.split(', ',1)[0]
         else:
-          AHVNr=''
+          AHVNr=None
 
         klient=klient.strip(', ')
         klient=klient.lstrip('Therapie für ')
@@ -142,12 +142,12 @@ class ImportData:
         Name,Vorname=Name_Vorname.rsplit(maxsplit=1)
       except ValueError:
         Name=Name_Vorname
-        Vorname=''
+        Vorname=None
 
       Adresse=rchAdr[-2]
       PLZ_Ort=rchAdr[-1]
       Addrzusatz=rchAdr[2:-2]
-      Adresse1=Adresse2=''
+      Adresse1=Adresse2=None
       try:
         Adresse1=Addrzusatz[0]
       except IndexError as e:
@@ -162,7 +162,7 @@ class ImportData:
         PLZ,Ort=PLZ_Ort.split(maxsplit=1)
     except ValueError as e:
       print(e,'Error in PLZ_Ort:',PLZ_Ort, file=sys.stderr)
-      PLZ=''
+      PLZ=None
       Ort=PLZ_Ort
 
     #return (rchAdr,(klNa,klVo,geb),beh)
@@ -187,7 +187,7 @@ class ImportData:
           else:
             z=z.replace('min','').strip(' .')
             t=t.replace('SFr','').strip(' .')
-          beh.append((rs[0],float(t),float(z),'',''))
+          beh.append((rs[0],float(t),float(z),None,None))
 
     elif tuple(map(lambda x:x.strip(' :'),behRaw[0:4]))==('Datum','Inhalt','Minuten','Betrag') or \
          tuple(map(lambda x:x.strip(' :'),behRaw[0:4]))==('Datum','Inhalt','Zeit','Kosten') or \
@@ -207,7 +207,7 @@ class ImportData:
           b=r[1]
           z=r[2].replace('min','')
           t=60*float(r[3].replace('CHF','').strip())/float(z)
-          beh.append((d,t,float(z),b,''))
+          beh.append((d,t,float(z),b,None))
 
     elif tuple(map(lambda x:x.strip(' :'),behRaw[0:6]))==('Datum','Tarif','Tarifziffer','Inhalt','Minuten','Betrag') or \
         tuple(map(lambda x:x.strip(' :'),behRaw[0:6]))==('Datum','Tarif','Tarifziffer','Inhalt','Zeit in Min','Kosten') or \
@@ -299,7 +299,7 @@ class ImportData:
   def rawdb2relational(self):
     print('--- rawdb2relational ---')
     db=self.db
-    self.lutKlient=lutKlient=dict() #database klienten
+    self.lutKlient2pk=lutKlient2pk=dict() #database klienten
     self.dbKlient=dbKlient=list() #database klienten
     self.dbRch=dbRch=list() #database Rechnungen
     self.dbBeh=dbBeh=list() #database Behandlungen
@@ -312,14 +312,14 @@ class ImportData:
     for (rchAddr,client,rchDat,behRaw) in db:
       keyKlient='\t'.join(client[:3])
       try:
-        idKlient=lutKlient[keyKlient]
+        pkKlient=lutKlient2pk[keyKlient]
       except KeyError:
-        idKlient=idNewKlient
-        lutKlient[keyKlient]=idKlient
-        dbKlient.append((idKlient,)+rchAddr+client)
+        pkKlient=idNewKlient
+        lutKlient2pk[keyKlient]=pkKlient
+        dbKlient.append((pkKlient,)+rchAddr+client)
         idNewKlient+=1
-      #print(keyKlient,idKlient)
-      dbRch.append((idRch,idKlient,rchDat))
+      #print(keyKlient,pkKlient)
+      dbRch.append((idRch,pkKlient,rchDat))
 
       #### analyze behandlung
       behLst=ImportData.split_behandlung(behRaw)
@@ -335,12 +335,12 @@ class ImportData:
           trt=trtDict.pop(beh[0])
         except KeyError:
           print('rawdb2relational(2) No akteneingtrag',beh[0],keyKlient,file=sys.stderr)
-          bem=verl=''
+          bem=verl=None
         else:
           bem=trt[0].strip()
           verl=trt[1]
-        rec=[idBeh,idRch,idKlient,];rec.extend(beh)
-        if rec[-2]=='':
+        rec=[idBeh,idRch,pkKlient,];rec.extend(beh)
+        if rec[-2] is None:
           rec[-2]=bem
         else:
           print('rawdb2relational(3) dupl Bemerkung:|',beh[0],file=sys.stderr)#+rec[-2]+'|',bem+'|',file=sys.stderr)
@@ -350,9 +350,26 @@ class ImportData:
       idRch+=1
 
     print('unused treatment entries:')
+    lutKlient2Path
+    lutKlient2pk
+    lutPath2pk=dict()
+    for k,v in lutKlient2Path.items():
+      vv=lutKlient2pk[k]
+      lutPath2pk[v]=vv
+
     for k,behDict in dbTrt.items():
       if len(behDict)>0:
         print(k,':',behDict.keys())
+        for kDat,trt in behDict.items():
+          pkKlient=lutPath2pk.get(k)
+          if pkKlient is None:
+            print('unknown key:',k)
+            print('rawdb2relational(4) unknown key:',k,file=sys.stderr)
+
+          bem=trt[0].strip()
+          verl=trt[1]
+          dbBeh.append((idBeh,None,pkKlient,kDat,None,None,bem,None,verl))
+          idBeh+=1
 
   def write_sql(self,fnSql='2020_Klienten.sql'):
     print('--- write_sql ---')
@@ -363,18 +380,26 @@ class ImportData:
     fh=open(fnSql,'w')
     #fh.write('INSERT INTO tblPerson (IDPerson,Anrede,Nachname,Vorname,Adresse,PLZ,Ort,Mobile,Telefon,eMail,Bemerkung) VALUES')
     fh.write('INSERT INTO tblPerson (pkPerson,RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,RngAdresse2,PLZ,Ort,Nachname,Vorname,datGeb,AHVNr) VALUES\n')
-    fh.write(',\n'.join(map(str,dbKlient)))
-    fh.write(';\n\n\n')
+    fh.write('('+'),\n('.join((map(lambda rec:','.join(map(lambda s:'NULL' if s is None else repr(s),rec)),dbKlient)))+');\n\n\n')
+    #fh.write(',\n'.join(map(str,dbKlient)))
 
     fh.write('INSERT INTO tblRechnung (pkRechnung,fkPerson,datRechnung) VALUES\n')
-    fh.write(',\n'.join(map(str,dbRch)))
-    fh.write(';\n\n\n')
+    fh.write('('+'),\n('.join((map(lambda rec:','.join(map(lambda s:'NULL' if s is None else repr(s),rec)),dbRch)))+');\n\n\n')
+    #fh.write(',\n'.join(map(str,dbRch)))
 
     fh.write('INSERT INTO tblBehandlung (pkBehandlung,fkRechnung,fkPerson,datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif,AktenEintrag) VALUES\n')
-    fh.write(',\n'.join(map(str,dbBeh)))
-    fh.write(';\n\n\n')
-    fh.close()
+    fh.write('('+'),\n('.join((map(lambda rec:','.join(map(lambda s:'NULL' if s is None else repr(s),rec)),dbBeh)))+');\n\n\n')
+    #fh.write(',\n'.join(map(map(str),dbBeh)))
 
+    #dbTst=((1,5,None,'sdfg'),(1,5,None,'sdfg'),(1,5,None,'sdfg'))
+    #print('('+'),\n('.join((map(lambda rec:','.join(map(lambda s:'NULL' if s is None else repr(s),rec)),dbTst)))+');')
+    #','.join(map(lambda s:'NULL' if s is None else repr(s),(1,5,None,'sdfg')))
+    #',\n'.join(map(lambda s:'NULL' if s is None else repr(s),dbTst))
+    #tuple(map(lambda rec: tuple(map(repr,rec)),dbTst))
+    #tuple((map(lambda rec:tuple(map(lambda s:'NULL' if s is None else repr(s),rec)),dbTst)))
+    #',\n'.join(map(lambda rec:map(lambda s:'NULL' if s is None else repr(s),rec),dbTst))
+    #"("+',\n'.join((map(lambda rec:','.join(map(lambda s:'NULL' if s is None else repr(s),rec)),dbTst)))+')'
+    fh.close()
 
 if __name__=='__main__':
 
