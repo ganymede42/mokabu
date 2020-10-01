@@ -8,6 +8,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtSql as qtdb
 import mokabu
+import wordprocessor as wp
 
 
 def MainApp(mkb):
@@ -23,6 +24,8 @@ def MainApp(mkb):
   mainWnd.show()
 
   mainWnd.OnQryClient()
+  wnd=wp.MainWindow()
+  WndChildAdd(wnd)
 
   sys.exit(app.exec_())
 

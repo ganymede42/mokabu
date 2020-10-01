@@ -5,6 +5,7 @@
 import sqlite3 as lite
 import sys
 import report
+
 class MoKaBu:
 
   def __init__(self,fn='mokabu.db'):

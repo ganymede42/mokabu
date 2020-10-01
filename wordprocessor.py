@@ -1,3 +1,5 @@
+#https://www.learnpyqt.com/examples/megasolid-idiom-rich-text-editor/
+
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -269,7 +271,6 @@ class MainWindow(QMainWindow):
         # Initialize.
         self.update_format()
         self.update_title()
-        self.show()
 
     def block_signals(self, objects, b):
         for o in objects:
@@ -373,4 +374,5 @@ if __name__ == '__main__':
     app.setApplicationName("Megasolid Idiom")
 
     window = MainWindow()
+    window.show()
     app.exec_()
