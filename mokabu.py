@@ -34,7 +34,7 @@ class MoKaBu:
 
   def reset(self):
     try:
-      schema='mokabu.schema'
+      schema='mokabu.schema.sql'
       dbc=self.dbc
       fh=open(schema,'r')
       dbc.executescript(fh.read())

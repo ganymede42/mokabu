@@ -23,8 +23,12 @@ def MainApp(mkb):
   mainWnd=WndMain() #must be assigned to a variable, else it 'selfsdestructs' before opening
   mainWnd.show()
 
-  mainWnd.OnQryClient()
+  #mainWnd.OnQryClient()
+
   wnd=wp.MainWindow()
+  wnd.editor.setText('text <b>djsff</b>')
+  wnd.update_title()
+
   WndChildAdd(wnd)
 
   sys.exit(app.exec_())
@@ -251,18 +255,19 @@ class WndMain(qtw.QWidget):
 
   def OnQryTreatment(self):
     print("OnQryTreatment")
-    wnd=qtw.QWidget("WndQryTreatment")
+    wnd=qtw.QWidget();wnd.setWindowTitle("WndQryTreatment")
     WndChildAdd(wnd)
 
   def OnQryInvoice(self):
     print("OnQryInvoice")
-    wnd=qtw.QWidget()
+    wnd=qtw.QWidget();wnd.setWindowTitle("WndQryInvoice")
+
     WndChildAdd(wnd)
 
   def OnQryNewInvoice(self):
     print("OnQryNewInvoice")
-    app=qtw.QApplication.instance()
-    #app.mkb
+    wnd=qtw.QWidget();wnd.setWindowTitle("WndQryNewInvoice")
+    WndChildAdd(wnd)
 
   def OnRepInvoices(self):
     print("OnRepInvoices")
