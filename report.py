@@ -126,7 +126,7 @@ class Invoice():
     story.append(rlp.Spacer(100,12))
     story.append(rlp.Paragraph(txt,styN))
     story.append(rlp.Spacer(1,12))
-    im=rlp.Image("signature.png",8*rlu.cm,8*139/735*rlu.cm) #735x139
+    im=rlp.Image("signature.png",8*rlu.cm,8*262/1024*rlu.cm) #1024x262, 735x139
     im.hAlign='CENTER'
     story.append(im)
     story.append(rlp.Spacer(1,12))

@@ -5,6 +5,7 @@ import sys
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtCore as qtc
 import PyQt5.QtCore as qtc
+import PyQt5.QtGui as qtg
 import PyQt5.QtSql as qtdb
 import mokabu
 
@@ -17,9 +18,12 @@ def MainApp(mkb):
   if not db.open():
     print('failed to open db')
 
+  app.wndTop=set()
   mainWnd=WndMain() #must be assigned to a variable, else it 'selfsdestructs' before opening
   mainWnd.show()
-  app.wndTop=set()
+
+  mainWnd.OnQryClient()
+
   sys.exit(app.exec_())
 
 def WndChildAdd(wnd):
@@ -66,7 +70,10 @@ class WndSqlTblView(qtw.QWidget):
 
     self.tbl=view=qtw.QTableView()
     view.setModel(mdl)
-
+    vh=view.verticalHeader()
+    vh.setDefaultSectionSize(22)
+    #vh.setCascadingSectionResizes(True)
+    vh.setMinimumSectionSize(16)
     loV=qtw.QVBoxLayout(self)
     loV.addWidget(view)
 
@@ -88,6 +95,78 @@ class WndSqlTblView(qtw.QWidget):
   def debug(self):
     self.tbl
 
+class WndClient(qtw.QWidget):
+  def __init__(self,title,geometry=(100,100,400,500)):
+    super(WndClient,self).__init__()
+    self.setGeometry(*geometry)
+    self.setWindowTitle(title)
+
+    #https://doc-snapshots.qt.io/qt5-5.15/qformlayout.html
+    loV=qtw.QVBoxLayout(self)
+    loH=qtw.QHBoxLayout()
+    loF=qtw.QFormLayout()
+
+    loV.addLayout(loF)
+    loV.addLayout(loH)
+    self.cbNaVo=cb=qtw.QComboBox()
+    #self.cbNaVoPkPers
+
+    app=qtw.QApplication.instance()
+    self.dbc=dbc=app.mkb.db.cursor()
+    itemsNaVo=dbc.execute('SELECT pkPerson, Nachname||" "||Vorname FROM tblPerson').fetchall()
+
+    #items=["Java","C#","Python"]
+    cb.setEditable(True)
+    #v=qtg.QIntValidator(100, 999, self) #QValidator()
+    #cb.setValidator(v)
+    #cb.InsertPolicy(qtw.QComboBox.NoInsert) does not work
+    cmpNaVo=[]
+    for pkPers,naVo in itemsNaVo:
+      cmpNaVo.append(naVo)
+      cb.addItem(naVo,pkPers)
+    #cb.model()
+    #cb.view()
+
+    cpl=qtw.QCompleter(cmpNaVo)
+    #cpl=qtw.QCompleter(cb.model())
+    cb.setCompleter(cpl)
+    cb.currentIndexChanged.connect(self.cbSelChanged)
+
+    loF.addRow('Suche',cb)
+    self.fldLst=fldLst=list()
+
+    for txt in ('pkPerson','RngAnrede','RngNachname','RngVorname','RngAdresse','RngAdresse1','RngAdresse2','PLZ','Ort','Nachname','Vorname','Tel1','Tel2','datGeb','eMail','AHVNr'):
+      w=qtw.QLineEdit()
+      fldLst.append(w)
+      loF.addRow(txt,w)
+
+    w=qtw.QTextEdit()
+    fldLst.append(w)
+    loF.addRow('Bemerkung',w)
+
+    for txt in ("Behandlungen","Rechnungen","Button"):
+      btn=qtw.QPushButton(txt,self)
+      loH.addWidget(btn)
+
+  def cbSelChanged(self,i):
+    cb=self.cbNaVo
+    curData=cb.currentData()
+    print("cbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
+    if cb.currentData() is None:
+      print("TODO:New Person inserted")
+      cb.removeItem(i)
+    else:
+      dbc=self.dbc
+      d=dbc.execute('SELECT * FROM tblPerson WHERE pkPerson=%d'%curData).fetchone()
+      print(d)
+      for w,d in zip(self.fldLst,d):
+        if d is None:
+          d=''
+        else:
+          d=str(d)
+        w.setText(d)
+
+
 #class WndMain(qtw.QMainWindow):
 class WndMain(qtw.QWidget):
 
@@ -105,6 +184,8 @@ class WndMain(qtw.QWidget):
     #self.statusBar()  #this is how it is done on QMainWindow
     #self.statusBar=qtw.QStatusBar(self)
     mnFile=mainMenu.addMenu('&File')
+
+    act=AddMenuAction(self,mnFile,"Populate dummy database",self.OnPopulateDummy)
     act=AddMenuAction(self,mnFile,"Quit",self.OnQuit)
     mnEdit=mainMenu.addMenu('&Edit')
     act=AddMenuAction(self,mnEdit,"Table Clients",self.OnTblClients)
@@ -129,13 +210,18 @@ class WndMain(qtw.QWidget):
     print("whooaaaa so custom!!!")
     sys.exit()
 
+  def OnPopulateDummy(self):
+    mkb=qtw.QApplication.instance().mkb
+    mkb.reset()
+    mkb.populate()
+
   def OnTblClients(self):
     print("OnTblClients")
-    #wnd=WndSqlTblView('TblClients:','tblPerson')
+    wnd=WndSqlTblView('TblClients:','tblPerson')
     #wnd=WndSqlTblView('TblClients:','SELECT * FROM tblPerson')
-    wnd=WndSqlTblView('TblClients:',
-                      'SELECT RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,PLZ,Ort FROM tblPerson ORDER BY RngNachname,RngVorname',
-                      geometry=(100,100,1200,700))
+    #wnd=WndSqlTblView('TblClients:',
+    #                  'SELECT RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,PLZ,Ort FROM tblPerson ORDER BY RngNachname,RngVorname',
+    #                  geometry=(100,100,1200,700))
     #wnd.tbl.setColumnWidth(2,200)
     for i in range(wnd.mdl.columnCount()):
       wnd.tbl.resizeColumnToContents(i)
@@ -157,7 +243,7 @@ class WndMain(qtw.QWidget):
 
   def OnQryClient(self):
     print("OnQryClient")
-    wnd=qtw.QWidget()
+    wnd=WndClient('QryClient')
     WndChildAdd(wnd)
 
   def OnQryTreatment(self):

@@ -57,6 +57,7 @@ CREATE TABLE tblBehandlung (
 	Stundenansatz NUMERIC DEFAULT 180,
 	Bemerkung TEXT,
 	TarZif TEXT,
+	AktenEintrag TEXT,
 	CONSTRAINT PKtblBehandlung PRIMARY KEY (pkBehandlung),
 	CONSTRAINT FKtblBehandlungfkRechnung FOREIGN KEY (fkRechnung) REFERENCES tblRechnung(pkRechnung)
 	CONSTRAINT FKtblBehandlungfkPerson FOREIGN KEY (fkPerson) REFERENCES tblPerson(pkPerson)

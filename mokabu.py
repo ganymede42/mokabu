@@ -100,13 +100,9 @@ if __name__=='__main__':
 
   mkb=MoKaBu('mokabu.db')
   #mkb.open()
-  mkb.reset()
-  mkb.populate()
+  #mkb.reset()
+  #mkb.populate()
   #mkb.report_invoice()
-
-  #import ui.App as uiApp
-  #uiApp.QtSqlApp()
-  #uiApp.startUI(mkb)
 
   import qtgui
   qtgui.MainApp(mkb)
