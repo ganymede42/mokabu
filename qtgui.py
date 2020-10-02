@@ -25,13 +25,9 @@ def MainApp(mkb):
 
   #mainWnd.OnQryClient()
 
-  txt=mkb.dbc.execute('SELECT AktenEintrag FROM tblBehandlung WHERE pkBehandlung=1').fetchone()
-  if txt is not None:
-    wnd=wp.MainWindow()
-    print(txt[0])
-    wnd.editor.setText(txt[0])
-    wnd.update_title()
-    WndChildAdd(wnd)
+  wpWnd=wp.MainWindow()
+  wpWnd.record_open(1)
+  WndChildAdd(wpWnd)
 
   sys.exit(app.exec_())
 

@@ -83,7 +83,7 @@ class MoKaBu:
     dbcRng=self.dbc
     dbcBeh=db.cursor()
     sqlTplBeh='''SELECT fkPerson,Nachname,Vorname,datGeb,Tel1,eMail,datBehandlung,tb.Bemerkung,AktenEintrag FROM tblBehandlung tb
-    LEFT JOIN tblPerson tp on tb.fkPerson=tp.pkPerson
+    LEFT JOIN tblPerson tp ON tb.fkPerson=tp.pkPerson
     ORDER BY fkPerson,tb.datBehandlung'''
 
     sqlBeh=sqlTplBeh
@@ -110,7 +110,7 @@ if __name__=='__main__':
   #mkb.reset()
   #mkb.populate()
   #mkb.report_invoice()
-  mkb.report_therapy_progress()
+  #mkb.report_therapy_progress()
 
   import qtgui
   qtgui.MainApp(mkb)

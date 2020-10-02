@@ -3,9 +3,11 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtPrintSupport import *
 
+
 import os
 import sys
 import uuid
+import re
 
 FONT_SIZES = [7, 8, 9, 10, 11, 12, 13, 14, 18, 24, 36, 48, 64, 72, 96, 144, 288]
 IMAGE_EXTENSIONS = ['.jpg','.png','.bmp']
@@ -105,7 +107,7 @@ class MainWindow(QMainWindow):
 
     save_file_action = QAction(QIcon(os.path.join('images', 'disk.png')), "Save", self)
     save_file_action.setStatusTip("Save current page")
-    save_file_action.triggered.connect(self.file_save)
+    save_file_action.triggered.connect(self.record_save)
     file_menu.addAction(save_file_action)
     file_toolbar.addAction(save_file_action)
 
@@ -367,6 +369,57 @@ class MainWindow(QMainWindow):
   def edit_toggle_wrap(self):
     self.editor.setLineWrapMode( 1 if self.editor.lineWrapMode() == 0 else 0 )
 
+  def record_open(self,pkBehandlung):
+    app=QApplication.instance()
+    mkb=app.mkb
+    self.pkBehandlung=pkBehandlung
+
+    txt=mkb.dbc.execute('SELECT Nachname,Vorname,datBehandlung,AktenEintrag FROM tblBehandlung tb '
+                        'LEFT JOIN tblPerson tp ON tb.fkPerson=tp.pkPerson '
+                        'WHERE pkBehandlung=?',(pkBehandlung,)).fetchone()
+    if txt is not None:
+      print(txt[0])
+      self.editor.setText(txt[3])
+      self.setWindowTitle("Therapy Progress: %s %s %s"%txt[0:3])
+
+  def record_save(self):
+    app=QApplication.instance()
+    mkb=app.mkb
+    dbc=mkb.dbc
+    txt = self.editor.toHtml()
+    m=re.search('<body.*>',txt)
+    p0=m.span(0)[1]
+    p1=txt.rfind('</body>')
+    txt=txt[p0:p1]
+    txt=txt.strip()
+    p=0
+    while True:
+      m=re.search('<span.*?>',txt[p:])
+      if m is None: break
+      sp=m.span()
+      p0=p+sp[0];p1=p+sp[1];p=sp[0]
+      span=txt[p0:p1]
+      print(span)
+      if span.find('font-weight')>=0:
+        f='b'
+      elif span.find('font-style')>=0:
+        f='i'
+      elif span.find('text-decoration')>=0:
+        f='u'
+      else:
+        f='em'
+        #TODO: ENHANCE TRANSLATION
+        #<span style=" font-weight:600; font-style:italic;">
+        #<span style=" font-weight:600;">
+        #<span style=" font-weight:600; text-decoration: underline;">
+        #<span style=" font-size:14pt; font-weight:600;">
+
+      txt=txt[:p0]+'<'+f+'>'+txt[p1:].replace('</span>','</'+f+'>',1)
+
+    #txt = self.editor.toPlainText()
+    #print(txt)
+    mkb.dbc.execute('UPDATE tblBehandlung SET AktenEintrag=? WHERE pkBehandlung=?',(txt,self.pkBehandlung))
+    mkb.db.commit()
 
 if __name__ == '__main__':
 
