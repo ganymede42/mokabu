@@ -21,6 +21,12 @@ class MoKaBu:
         #One way of permanently turning on foreign_keys by default is to inject the following line into ~/.sqliterc: PRAGMA foreign_keys = ON;
         dbc.execute("PRAGMA foreign_keys = 1")
         #dbc.execute("PRAGMA foreign_keys")
+        for sql in('SELECT COUNT(*) FROM tblPerson',
+                   'SELECT COUNT(*) FROM tblBehandlung',
+                   'SELECT COUNT(*) FROM tblRechnung'):
+          print(sql+' -> ',end='')
+          for row in dbc.execute(sql):
+            print(row)
     except lite.Error as e:
         print("Error %s:" % e.args[0])
         sys.exit(1)
@@ -41,31 +47,6 @@ class MoKaBu:
     except lite.Error as e:
         print(schema+" Error %s:" % e.args[0])
 
-  def populate(self):
-    dbc=self.dbc
-    try:
-      #populate='populate.sql'
-      populate='2020_Klienten.sql'
-      dbc=self.dbc
-      fh=open(populate,'r')
-      dbc.executescript(fh.read())
-      self.db.commit()
-    except lite.Error as e:
-      print(populate+" Error %s:"%e.args[0])
-
-    try:
-      for row in dbc.execute('SELECT * FROM tblPerson'):
-        print(row)
-      for row in dbc.execute('SELECT * FROM tblBehandlung'):
-        print(row)
-      for row in dbc.execute("SELECT datetime(datBehandlung,'unixepoch'),* FROM tblBehandlung"):
-        print(row)
-      print('xxx')
-      for row in dbc.execute("SELECT tblBehandlung.*, tblPerson.* FROM tblBehandlung LEFT JOIN tblPerson ON tblBehandlung.fkPerson=tblPerson.pkPerson;"):
-        print(row)
-    except lite.Error as e:
-        print("SQL tests Error %s:" % e.args[0])
-
   def report_invoice(self):
     db=self.db
     dbcRng=self.dbc
@@ -83,8 +64,8 @@ class MoKaBu:
 #FROM tblBehandlung tb LEFT JOIN tblRechnung tr ON tb.fkRechnung=tr.pkRechnung LEFT JOIN tblPerson tp on tb.fkPerson =tp.pkPerson
 #ORDER BY tr.pkRechnung, tb.datBehandlung'''
 
-    repIvc=report.Invoice()
-    repIvc.init()
+    fn='invoice.pdf'
+    repIvc=report.Invoice(fn)
 
     for recRng in dbcRng.execute(sqlRng):
       print(recRng)
@@ -94,7 +75,32 @@ class MoKaBu:
       print(dBeh)
       repIvc.add(recRng[2:],recRng[1],dBeh)
 
-    repIvc.finalize()
+    repIvc.publish()
+    report.default_app_open(fn);
+
+  def report_therapy_progress(self):
+    db=self.db
+    dbcRng=self.dbc
+    dbcBeh=db.cursor()
+    sqlTplBeh='''SELECT fkPerson,Nachname,Vorname,datGeb,Tel1,eMail,datBehandlung,tb.Bemerkung,AktenEintrag FROM tblBehandlung tb
+    LEFT JOIN tblPerson tp on tb.fkPerson=tp.pkPerson
+    ORDER BY fkPerson,tb.datBehandlung'''
+
+    sqlBeh=sqlTplBeh
+    fn='therapy_progress.pdf'
+    repBeh=report.TherapyProgress(fn)
+
+    fkCurPerson=-1
+    for recBeh in dbcRng.execute(sqlBeh):
+      fkPerson=recBeh[0]
+      if fkPerson!=fkCurPerson:
+        fkCurPerson=fkPerson
+        repBeh.addClient(*recBeh[1:6])
+      repBeh.addTherapyProgress(*recBeh[6:9])
+    repBeh.publish()
+    report.default_app_open(fn);
+
+
 
 
 if __name__=='__main__':
@@ -104,6 +110,7 @@ if __name__=='__main__':
   #mkb.reset()
   #mkb.populate()
   #mkb.report_invoice()
+  mkb.report_therapy_progress()
 
   import qtgui
   qtgui.MainApp(mkb)

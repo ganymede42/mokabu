@@ -12,6 +12,7 @@ docx2txt < '/media/zamofing_t/DataHD/Praxis/Klienten/2020_Klienten/Kratz-Ulmer A
 import os,sys,re
 import subprocess as spc
 from  pathlib import Path as plPath
+import sqlite3 as lite
 
 def getline(fh,errStr='getline'):
   l=fh.readline()
@@ -24,8 +25,15 @@ def insert_verlauf(rec,date,title,eintrag):
     if date in rec:
       print('insert_verlauf(1): Dupkicate key:',date,file=sys.stderr)
     else:
+      #eintrag='\n'.join(eintrag)
+      #eintrag='<br/>'.join(eintrag)
+
       eintrag='\n'.join(eintrag)
-      rec[date]=(title,eintrag.strip())
+      eintrag=eintrag.strip()
+      eintrag.replace('\n','<br/>')
+      title=title.strip()
+
+      rec[date]=(title,eintrag)
 
 
 class ImportData:
@@ -288,7 +296,7 @@ class ImportData:
         eintrag=[]
       else:
         try:
-          eintrag.append(l)
+          eintrag.append(l.strip())
         except UnboundLocalError as e:
           print('read_verlauf(2)',fh.name,e,file=sys.stderr)
           print(l.strip())
@@ -350,8 +358,6 @@ class ImportData:
       idRch+=1
 
     print('unused treatment entries:')
-    lutKlient2Path
-    lutKlient2pk
     lutPath2pk=dict()
     for k,v in lutKlient2Path.items():
       vv=lutKlient2pk[k]
@@ -389,17 +395,59 @@ class ImportData:
 
     fh.write('INSERT INTO tblBehandlung (pkBehandlung,fkRechnung,fkPerson,datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif,AktenEintrag) VALUES\n')
     fh.write('('+'),\n('.join((map(lambda rec:','.join(map(lambda s:'NULL' if s is None else repr(s),rec)),dbBeh)))+');\n\n\n')
-    #fh.write(',\n'.join(map(map(str),dbBeh)))
-
-    #dbTst=((1,5,None,'sdfg'),(1,5,None,'sdfg'),(1,5,None,'sdfg'))
-    #print('('+'),\n('.join((map(lambda rec:','.join(map(lambda s:'NULL' if s is None else repr(s),rec)),dbTst)))+');')
-    #','.join(map(lambda s:'NULL' if s is None else repr(s),(1,5,None,'sdfg')))
-    #',\n'.join(map(lambda s:'NULL' if s is None else repr(s),dbTst))
-    #tuple(map(lambda rec: tuple(map(repr,rec)),dbTst))
-    #tuple((map(lambda rec:tuple(map(lambda s:'NULL' if s is None else repr(s),rec)),dbTst)))
-    #',\n'.join(map(lambda rec:map(lambda s:'NULL' if s is None else repr(s),rec),dbTst))
-    #"("+',\n'.join((map(lambda rec:','.join(map(lambda s:'NULL' if s is None else repr(s),rec)),dbTst)))+')'
     fh.close()
+    print('write_sql file %s done.'%fnSql)
+
+  def exec_sql(self,fnSchema='mokabu.schema.sql',fnDatabase='mokabu.db'):
+    print('--- exec_sql ---')
+    dbKlient=self.dbKlient
+    dbRch=self.dbRch
+    dbBeh=self.dbBeh
+    try:
+      db=lite.connect(fnDatabase)
+      dbc=db.cursor()
+      dbc.execute('SELECT SQLITE_VERSION()')
+      data = dbc.fetchone()
+      print("SQLite version: %s" % data)
+      dbc.execute("PRAGMA foreign_keys = 1")
+    except lite.Error as e:
+      print("exec_sql(1), Error %s:" % e.args[0],e,file=sys.stderr)
+      return
+
+    try:
+      fh=open(fnSchema,'r')
+      dbc.executescript(fh.read())
+    except lite.Error as e:
+      print("exec_sql(2),"+fnSchema+" Error %s:"%e.args[0],e,file=sys.stderr)
+      return
+
+    try:
+      dbc.executemany(
+        'INSERT INTO tblPerson (pkPerson,RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,RngAdresse2,PLZ,Ort,Nachname,Vorname,datGeb,AHVNr) VALUES\n'\
+        '(?,?,?,?,?,?,?,?,?,?,?,?,?)',dbKlient)
+
+      dbc.executemany(
+        'INSERT INTO tblRechnung (pkRechnung,fkPerson,datRechnung) VALUES\n'\
+        '(?,?,?)',dbRch)
+
+      dbc.executemany(
+        'INSERT INTO tblBehandlung (pkBehandlung,fkRechnung,fkPerson,datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif,AktenEintrag) VALUES\n'\
+        '(?,?,?,?,?,?,?,?,?)',dbBeh)
+
+      for sql in ('SELECT COUNT(*) FROM tblPerson',
+                  'SELECT COUNT(*) FROM tblBehandlung',
+                  'SELECT COUNT(*) FROM tblRechnung'):
+        print(sql+' -> ',end='')
+        for row in dbc.execute(sql):
+          print(row)
+      db.commit()
+      db.close()
+
+    except lite.Error as e:
+      print("exec_sql(3), Error %s:"%e.args[0],e,file=sys.stderr)
+      return
+    print('exec_sql done.')
+
 
 if __name__=='__main__':
 
@@ -412,7 +460,7 @@ if __name__=='__main__':
   impDat.parse_treatments('/tmp/mokabu/treatment')
   impDat.rawdb2relational()
   impDat.write_sql()
-  print('write sql file done.')
+  impDat.exec_sql()
 
 
 

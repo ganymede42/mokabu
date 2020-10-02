@@ -25,11 +25,13 @@ def MainApp(mkb):
 
   #mainWnd.OnQryClient()
 
-  wnd=wp.MainWindow()
-  wnd.editor.setText('text <b>djsff</b>')
-  wnd.update_title()
-
-  WndChildAdd(wnd)
+  txt=mkb.dbc.execute('SELECT AktenEintrag FROM tblBehandlung WHERE pkBehandlung=1').fetchone()
+  if txt is not None:
+    wnd=wp.MainWindow()
+    print(txt[0])
+    wnd.editor.setText(txt[0])
+    wnd.update_title()
+    WndChildAdd(wnd)
 
   sys.exit(app.exec_())
 
@@ -192,7 +194,6 @@ class WndMain(qtw.QWidget):
     #self.statusBar=qtw.QStatusBar(self)
     mnFile=mainMenu.addMenu('&File')
 
-    act=AddMenuAction(self,mnFile,"Populate dummy database",self.OnPopulateDummy)
     act=AddMenuAction(self,mnFile,"Quit",self.OnQuit)
     mnEdit=mainMenu.addMenu('&Edit')
     act=AddMenuAction(self,mnEdit,"Table Clients",self.OnTblClients)
@@ -204,23 +205,20 @@ class WndMain(qtw.QWidget):
     act=AddMenuAction(self,mnEdit,"New Invoice",self.OnQryNewInvoice)
     mnRpt=mainMenu.addMenu('&Report')
     act=AddMenuAction(self,mnRpt,"Invoices",self.OnRepInvoices)
+    act=AddMenuAction(self,mnRpt,"Therapy Progress",self.OnRepTherapyProgress)
 
   def closeEvent(self, event):
     print('closeEvent')
     app=qtw.QApplication.instance()
-    if len(app.wndTop)>0:
-      print('close cild windows first',app.wndTop)
-      event.ignore()
-      #app.wndTop.clear()
+    #app.wndTop.clear()  #free and close all instances
+    #if len(app.wndTop)>0:
+    #  print('close cild windows first',app.wndTop)
+    #  event.ignore()
+    sys.exit()
 
   def OnQuit(self):
     print("whooaaaa so custom!!!")
     sys.exit()
-
-  def OnPopulateDummy(self):
-    mkb=qtw.QApplication.instance().mkb
-    mkb.reset()
-    mkb.populate()
 
   def OnTblClients(self):
     print("OnTblClients")
@@ -274,8 +272,12 @@ class WndMain(qtw.QWidget):
     app=qtw.QApplication.instance()
     app.mkb.report_invoice()
 
+  def OnRepTherapyProgress(self):
+    print("OnRepTherapyProgress")
+    app=qtw.QApplication.instance()
+    app.mkb.report_therapy_progress()
 
-#https://doc.qt.io/qtforpython/PySide2/QtSql/QSqlRelationalTableModel.html
+  #https://doc.qt.io/qtforpython/PySide2/QtSql/QSqlRelationalTableModel.html
 #https://doc.qt.io/qtforpython/PySide2/QtSql/QSqlTableModel.html
 #TODO:
 # quite generic QSqlTableModel UI QSqlRelationalTableModel
