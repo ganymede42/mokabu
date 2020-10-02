@@ -30,13 +30,19 @@ def insert_verlauf(rec,date,title,eintrag):
 
       eintrag='\n'.join(eintrag)
       eintrag=eintrag.strip()
-      eintrag.replace('\n','<br/>')
+      eintrag.replace('\n','<br/>\n')
       title=title.strip()
 
       rec[date]=(title,eintrag)
 
 
 class ImportData:
+
+  def __init__(self):
+    fn='/tmp/mokabu/import.log'
+    print(' logging to file: '+fn)
+    os.makedirs(plPath(fn).parent.as_posix(),exist_ok=True)
+    self.log=open(fn,'w')
 
   @staticmethod
   def docx2txt_invoices(srcPath,dstPath):
@@ -87,6 +93,11 @@ class ImportData:
     #for fn in fnLst:
     for path in sorted(plPath(srcPath).glob('*Rech*.txt')):
       fn=path.as_posix()
+      if fn.find('Zahlungserinnerung')>=0 or \
+         fn.find('Osei_Lawrence#Rechnung_mit_Tarifziffern_20191026.txt')>=0  or \
+         fn.find('Osei_Lawrence#Rechnung_mit_Tarifziffern_20200924.txtt')>=0:
+        print('parse_invoices(1): ignored:'+fn,file=sys.stderr)
+        continue
       fh=open(fn,'r')
       try:
         rec=ImportData.read_klient(fh)
@@ -94,7 +105,7 @@ class ImportData:
         keyKlient='\t'.join(rec[1][:3])
         keyPath=path.stem.split('#',1)[0]
         lutKlient2Path[keyKlient]=keyPath
-        #print(rec[0],rec[1])
+        print(fn,keyPath,keyKlient,file=self.log)
       except IOError as e:
         print(e, file=sys.stderr)
       fh.close()
@@ -270,12 +281,14 @@ class ImportData:
       fh=open(fn,'r')
       try:
         rec=ImportData.read_verlauf(fh)
+        print(fn,rec.keys(),file=self.log)
         key=path.stem.split('#')[0]
         if key in dbTrt:
           print('duplicated keys:',key, file=sys.stderr)
           print(dbTrt[key].keys() & rec.keys())
-          dbTrt[key]=dbTrt[key].update(rec)
-        dbTrt[key]=rec
+          dbTrt[key].update(rec)
+        else:
+          dbTrt[key]=rec
         #print(rec[0],rec[1])
       except IOError as e:
         print(e, file=sys.stderr)
@@ -331,6 +344,7 @@ class ImportData:
 
       #### analyze behandlung
       behLst=ImportData.split_behandlung(behRaw)
+      print(keyKlient, tuple(map(lambda x: x[0],behLst)),file=self.log)
       try:
         trtDict=dbTrt[lutKlient2Path[keyKlient]]
       except KeyError:
@@ -357,7 +371,7 @@ class ImportData:
         idBeh+=1
       idRch+=1
 
-    print('unused treatment entries:')
+    print('--- unlinked treatment entries (not in any invoice)--- ')
     lutPath2pk=dict()
     for k,v in lutKlient2Path.items():
       vv=lutKlient2pk[k]
@@ -452,9 +466,12 @@ class ImportData:
 if __name__=='__main__':
 
   impDat=ImportData()
-
-  #impDat.docx2txt_invoices('/media/zamofing_t/DataHD/Praxis/Klienten/2020_Klienten/','/tmp/mokabu/invoice')
-  #impDat.docx2txt_treatments('/media/zamofing_t/DataHD/Praxis/Klienten/2020_Klienten/','/tmp/mokabu/treatment')
+  path='/tmp/mokabu/invoice'
+  if not os.path.exists(path):
+    impDat.docx2txt_invoices('/media/zamofing_t/DataHD/Praxis/Klienten/2020_Klienten/',path)
+  path='/tmp/mokabu/treatment'
+  if not os.path.exists(path):
+    impDat.docx2txt_treatments('/media/zamofing_t/DataHD/Praxis/Klienten/2020_Klienten/',path)
 
   impDat.parse_invoices('/tmp/mokabu/invoice')
   impDat.parse_treatments('/tmp/mokabu/treatment')
