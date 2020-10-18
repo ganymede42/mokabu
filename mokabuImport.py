@@ -48,6 +48,7 @@ class ImportData:
   def docx2txt_invoices(srcPath,dstPath):
     print('--- docx2txt_invoices ---')
     os.makedirs(dstPath,exist_ok=True)
+    print('reading files '+srcPath+'/*Rech*.doc*')
     for path in plPath(srcPath).rglob('*Rech*.doc*'):
       if path.name.startswith('.~lock'):
         continue  #ignore
@@ -62,6 +63,7 @@ class ImportData:
   @staticmethod
   def docx2txt_treatments(srcPath,dstPath):
     print('--- docx2txt_treatments ---')
+    print('reading files '+srcPath+'/*Verl*.doc*')
     os.makedirs(dstPath,exist_ok=True)
     for path in plPath(srcPath).rglob('*Verl*.doc*'):
       if path.name.startswith('.~lock'):
@@ -86,10 +88,11 @@ class ImportData:
     pass
 
   def parse_invoices(self,srcPath):
+    print('--- parse_invoices ---')
     self.db=db=list() #database
     self.lutKlient2Path=lutKlient2Path=dict() #database klienten to path
     #fnLst=('/tmp/mokabu/invoice/Hermann_Estella_Luisa_Rechnung_20200805.txt', #missing geb:
-    #       '/tmp/mokabu/invoice/Preisig_Lukas_Rechnung_200925.txt') #missing geb:
+  #     I                           '/tmp/mokabu/invoice/Preisig_Lukas_Rechnung_200925.txt') #missing geb:
     #for fn in fnLst:
     for path in sorted(plPath(srcPath).glob('*Rech*.txt')):
       fn=path.as_posix()
@@ -275,6 +278,7 @@ class ImportData:
     return beh
 
   def parse_treatments(self,srcPath):
+    print('--- parse_treatments ---')
     self.dbTrt=dbTrt=dict()
     for path in sorted(plPath(srcPath).glob('*.txt')):
       fn=path.as_posix()
@@ -465,13 +469,27 @@ class ImportData:
 
 if __name__=='__main__':
 
+
+  import os,sys,argparse #since python 2.7
+  def GetParser(required=True):
+    exampleCmd='--host=PPMACZT84 --elem g io m1 c1 m2'
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     description=__doc__,
+                                     epilog='Example:\n'+os.path.basename(sys.argv[0])+' '+exampleCmd+'\n ')
+    parser.add_argument('--force', '-f', action='store_true', help='force doc2txt')
+    parser.add_argument('-p','--srcpath', default='/media/zamofing_t/DataHD/Praxis/Klienten/2020_Klienten', help='source path')
+    return parser
+
+  parser=GetParser()
+  args = parser.parse_args()
+
   impDat=ImportData()
   path='/tmp/mokabu/invoice'
-  if not os.path.exists(path):
-    impDat.docx2txt_invoices('/media/zamofing_t/DataHD/Praxis/Klienten/2020_Klienten/',path)
+  if args.force or not os.path.exists(path):
+    impDat.docx2txt_invoices(args.srcpath,path)
   path='/tmp/mokabu/treatment'
-  if not os.path.exists(path):
-    impDat.docx2txt_treatments('/media/zamofing_t/DataHD/Praxis/Klienten/2020_Klienten/',path)
+  if args.force or not os.path.exists(path):
+    impDat.docx2txt_treatments(args.srcpath,path)
 
   impDat.parse_invoices('/tmp/mokabu/invoice')
   impDat.parse_treatments('/tmp/mokabu/treatment')

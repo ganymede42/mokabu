@@ -416,7 +416,8 @@ class MainWindow(QMainWindow):
 
       txt=txt[:p0]+'<'+f+'>'+txt[p1:].replace('</span>','</'+f+'>',1)
 
-    #txt = self.editor.toPlainText()
+    #remove all remaning style attributes -> but this loses all spacing of the paragraphs...
+    txt=re.sub('\s*style=".*?"','',txt)
     #print(txt)
     mkb.dbc.execute('UPDATE tblBehandlung SET AktenEintrag=? WHERE pkBehandlung=?',(txt,self.pkBehandlung))
     mkb.db.commit()

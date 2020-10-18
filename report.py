@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import time,os, platform
+import time,os,platform,re
 import subprocess as spc
 import reportlab as rl
 import reportlab.lib as rll
@@ -154,8 +154,8 @@ class TherapyProgress(rlp.SimpleDocTemplate):
     styN=self.styles['Normal']
     styR=self.styles['Right']
     styJ=self.styles['Justify']
-    self.defaultVars=(story,styN,styJ,styR)
-
+    styC=self.styles['Center']
+    self.defaultVars=(story,styN,styJ,styR,styC)
 
   def beforeDocument(self):
     canvas=self.canv
@@ -185,7 +185,7 @@ class TherapyProgress(rlp.SimpleDocTemplate):
       self.addTherapyProgress(*therapy)
 
   def addClient(self,nachname,vorname,datGeb,tel1,eMail):
-    (story,styN,styJ,styR)=self.defaultVars
+    (story,styN,styJ,styR,styC)=self.defaultVars
     story.append(rlp.PageBreakIfNotEmpty())
     #story.append(rlp.DocAssign('hdr',"nachname+' '+vorname"))
     if tel1 is None:tel1=''
@@ -194,10 +194,36 @@ class TherapyProgress(rlp.SimpleDocTemplate):
     story.append(rlp.Spacer(1,18))
 
   def addTherapyProgress(self,date,title,treatment):
-    (story,styN,styJ,styR)=self.defaultVars
+    (story,styN,styJ,styR,styC)=self.defaultVars
     story.append(rlp.Paragraph('<b>%s %s</b>'%(date,title),styN))
     story.append(rlp.Indenter(36,0))
-    story.append(rlp.Paragraph(str(treatment),styJ))
+
+    txt=str(treatment)
+    p0=-1
+    p3=0
+    while True:
+      m=re.search('<p.*?>',txt[p3:])
+      if m is None: break
+      sp=m.span()
+      p0=p3+sp[0];p1=p3+sp[1]
+      parSty=txt[p0:p1]
+      n=re.search('</p>',txt[p1:])
+      sp=n.span()
+      p2=p1+sp[0];p3=p1+sp[1]
+
+      if parSty.find('center')>=0:
+        sty=styC
+      elif parSty.find('justify')>=0:
+        sty=styJ
+      elif parSty.find('right')>=0:
+        sty=styR
+      else:
+        sty=styN
+      story.append(rlp.Paragraph(txt[p1:p2],sty))
+    if p0==-1: # no html text
+      txt=re.sub('\n','<br/>',txt)
+      story.append(rlp.Paragraph(txt,styN))
+
     story.append(rlp.Indenter(-36,0))
     story.append(rlp.Spacer(1,12))
     #story.append(rlp.DocPara('doc.canv.getPageNumber()','The current page number is %(__expr__)d',style=styN))
@@ -304,7 +330,15 @@ def test1(fn):
 
 if __name__ == '__main__':
 
-  lorIps='Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et'
+  lorIps='Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et:::'
+
+  lorIps='''<p>Wenn er nicht gehorcht streicht sie das Gamen und TV schauen. In der Regel darf Aras 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
+<p align="center">Wenn er nicht gehorcht streicht sie das Gamen und TV schauen. In der Regel darf Aras 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
+<p align="right">Wenn er nicht gehorcht streicht sie das Gamen und TV schauen. In der Regel darf Aras 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
+<p align="justify">Wenn er nicht gehorcht streicht sie das Gamen und TV schauen. In der Regel darf Aras 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
+<p align="justify">Wenn er nicht <b>gehorcht</b> <i>streicht</i> <u>sie</u> das Gamen und TV schauen. In der Regel darf Aras 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
+'''
+
 
   def testInvoice(fn):
     lstKlient=\

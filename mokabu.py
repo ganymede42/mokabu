@@ -78,16 +78,18 @@ class MoKaBu:
     repIvc.publish()
     report.default_app_open(fn);
 
-  def report_therapy_progress(self):
+  def report_therapy_progress(self, sqlFilt=None,fn='therapy_progress.pdf'):
     db=self.db
     dbcRng=self.dbc
     dbcBeh=db.cursor()
-    sqlTplBeh='''SELECT fkPerson,Nachname,Vorname,datGeb,Tel1,eMail,datBehandlung,tb.Bemerkung,AktenEintrag FROM tblBehandlung tb
-    LEFT JOIN tblPerson tp ON tb.fkPerson=tp.pkPerson
-    ORDER BY fkPerson,tb.datBehandlung'''
+    sqlTplBeh='SELECT fkPerson,Nachname,Vorname,datGeb,Tel1,eMail,datBehandlung,tb.Bemerkung,AktenEintrag FROM tblBehandlung tb LEFT JOIN tblPerson tp ON tb.fkPerson=tp.pkPerson'
+    sqlTplOrd='ORDER BY fkPerson,tb.datBehandlung'''
 
-    sqlBeh=sqlTplBeh
-    fn='therapy_progress.pdf'
+    if sqlFilt is None:
+      sqlBeh=sqlTplBeh+' '+sqlTplOrd
+    else:
+      sqlBeh=sqlTplBeh+' WHERE '+sqlFilt+' '+sqlTplOrd
+
     repBeh=report.TherapyProgress(fn)
 
     fkCurPerson=-1

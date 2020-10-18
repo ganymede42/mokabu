@@ -149,8 +149,10 @@ class WndClient(qtw.QWidget):
     fldLst.append(w)
     loF.addRow('Bemerkung',w)
 
-    for txt in ("Behandlungen","Rechnungen","Button"):
+    for txt,func in (("Behandlungen",None),("Rechnungen",None),("Report Treatment",self.OnRptTreatmentProgress)):
       btn=qtw.QPushButton(txt,self)
+      if func is not None:
+        btn.clicked.connect(func)
       loH.addWidget(btn)
 
   def cbSelChanged(self,i):
@@ -171,23 +173,25 @@ class WndClient(qtw.QWidget):
           d=str(d)
         w.setText(d)
 
+  def OnRptTreatmentProgress(self):
+    print('OnRptTreatmentProgress')
+    app=qtw.QApplication.instance()
+    curData=self.cbNaVo.currentData()
+    app.mkb.report_therapy_progress('pkPerson=%d'%curData)
 
-#class WndMain(qtw.QMainWindow):
-class WndMain(qtw.QWidget):
+
+class WndMain(qtw.QMainWindow):
 
   def __init__(self):
     super(WndMain,self).__init__()
-    self.setGeometry(150,150,500,300)
+    self.setGeometry(150,150,1300,900)
     self.setWindowTitle("MoKaBu")
     #self.setWindowIcon(qtw.QIcon('pythonlogo.png'))
+    self.mdi=qtw.QMdiArea()
+    self.setCentralWidget(self.mdi)
 
-    lbl=qtw.QLabel('Thierry Zamofing\nth.zamofing@gmail.com\n(c) 2020',self)
-    #lbl.setText()
-    lbl.move(50,20)
-    #mainMenu=self.menuBar() #this is how it is done on QMainWindow
-    self.mainMenu=mainMenu=qtw.QMenuBar(self)
-    #self.statusBar()  #this is how it is done on QMainWindow
-    #self.statusBar=qtw.QStatusBar(self)
+    mainMenu=self.menuBar()
+    self.statusBar()
     mnFile=mainMenu.addMenu('&File')
 
     act=AddMenuAction(self,mnFile,"Quit",self.OnQuit)
@@ -245,7 +249,13 @@ class WndMain(qtw.QWidget):
   def OnQryClient(self):
     print("OnQryClient")
     wnd=WndClient('QryClient')
-    WndChildAdd(wnd)
+    sub=qtw.QMdiSubWindow()
+    sub.setWidget(wnd)
+    #sub.setWindowTitle("subwindow"+str(MainWindow.count))
+    self.mdi.addSubWindow(sub)
+    sub.show()
+
+    #WndChildAdd(wnd)
 
   def OnQryTreatment(self):
     print("OnQryTreatment")
