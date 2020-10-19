@@ -112,7 +112,7 @@ if __name__=='__main__':
   #mkb.reset()
   #mkb.populate()
   #mkb.report_invoice()
-  #mkb.report_therapy_progress()
+  mkb.report_therapy_progress()
 
   import qtgui
   qtgui.MainApp(mkb)

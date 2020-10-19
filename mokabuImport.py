@@ -9,32 +9,56 @@ docx2txt < '/media/zamofing_t/DataHD/Praxis/Klienten/2020_Klienten/Kratz-Ulmer A
 ...
 '''
 
-import os,sys,re
+import os,sys,re,time
 import subprocess as spc
 from  pathlib import Path as plPath
 import sqlite3 as lite
 
-def getline(fh,errStr='getline'):
+def getline(fh,errStr='getline:%s:error'):
   l=fh.readline()
   if l=='':
-    raise IOError(errStr+': error in '+fh.name)
+    raise IOError(errStr%fh.name)
   return l[:-1]
 
-def insert_verlauf(rec,date,title,eintrag):
-  if date is not None:
-    if date in rec:
-      print('insert_verlauf(1): Dupkicate key:',date,file=sys.stderr)
-    else:
-      #eintrag='\n'.join(eintrag)
-      #eintrag='<br/>'.join(eintrag)
+def dateconvert(dateStr,errStr='dateconvert'):
+  #https://www.sqlitetutorial.net/sqlite-date/
+  #time.time() # epoch time (Seconds since 1.1.1970)
+  #time.gmtime() struct of current time
+  #time.mktime(time.gmtime()) #convert struct to epoch time
+  #time.strptime("30 Nov 00", "%d %b %y")  convert string to struct
+  for fmt in ("%d.%m.%y","%d.%m.%Y"):
+    try:
+      dateStruct=time.strptime(dateStr,fmt)
+    except ValueError:
+      continue
+    break
+  try:
+    #dateEpoch=int(time.mktime(dateStruct)) # conver struct to second since 1.1.1970
+    dateEpoch=time.strftime('%Y-%m-%d',dateStruct)
+    #dateEpoch=int(time.strftime('%Y%m%d',dateStruct))
+  except UnboundLocalError as e:
+    raise UserWarning(str(dateStr))
+  return dateEpoch
 
-      eintrag='\n'.join(eintrag)
-      eintrag=eintrag.strip()
-      eintrag.replace('\n','<br/>\n')
-      title=title.strip()
 
-      rec[date]=(title,eintrag)
 
+def insert_verlauf(rec,dateStr,title,eintrag,fh):
+  if dateStr is not None:
+    try:
+      date=dateconvert(dateStr,str(rec))
+    except UserWarning as e:
+      print('insert_verlauf(1)'+fh.name+':error in dateconvert:"%s"'%str(dateStr),file=sys.stderr)
+      date=0
+    while date in rec:
+      print('insert_verlauf(1): warning dupkicate key:',fh.name,dateStr,date,file=sys.stderr)
+      date+='.'
+
+    eintrag='\n'.join(eintrag)
+    eintrag=eintrag.strip()
+    #eintrag.replace('\n','<br/>\n')
+    title=title.strip()
+
+    rec[date]=(title,eintrag)
 
 class ImportData:
 
@@ -50,8 +74,11 @@ class ImportData:
     os.makedirs(dstPath,exist_ok=True)
     print('reading files '+srcPath+'/*Rech*.doc*')
     for path in plPath(srcPath).rglob('*Rech*.doc*'):
-      if path.name.startswith('.~lock'):
+      if path.name.startswith('.~lock') or path.name.startswith('~$') or\
+        path.name.find('Zahlungserinnerung')>=0:
+        print('docx2txt_invoices(1): ignored:'+path.as_posix(),file=sys.stderr)
         continue  #ignore
+
       fnSrc=path.as_posix()
       fnDst=plPath(dstPath).joinpath(path.parts[-2]+'#'+path.stem+'.txt' ).as_posix()
       fnDst=fnDst.replace(' ','_')
@@ -66,11 +93,12 @@ class ImportData:
     print('reading files '+srcPath+'/*Verl*.doc*')
     os.makedirs(dstPath,exist_ok=True)
     for path in plPath(srcPath).rglob('*Verl*.doc*'):
-      if path.name.startswith('.~lock'):
+      if path.name.startswith('.~lock') or path.name.startswith('~$'):
+        print('docx2txt_invoices(1): ignored:'+path.name,file=sys.stderr)
         continue #ignore
       fnSrc=path.as_posix()
       if path.parts[-2]!=path.stem.replace('_Verlauf',''):
-        print('Filename warning:'+path.parts[-2]+' <-> '+path.stem, file=sys.stderr)
+        print('docx2txt_treatments(2): Filename warning:'+path.parts[-2]+' <-> '+path.stem, file=sys.stderr)
 
       fnDst=plPath(dstPath).joinpath(path.parts[-2]+'#'+path.stem+'.txt').as_posix()
       fnDst=fnDst.replace(' ','_')
@@ -89,69 +117,83 @@ class ImportData:
 
   def parse_invoices(self,srcPath):
     print('--- parse_invoices ---')
-    self.db=db=list() #database
+    self.dbRawIvc=dbRawIvc=list() #invoice raw database
     self.lutKlient2Path=lutKlient2Path=dict() #database klienten to path
     #fnLst=('/tmp/mokabu/invoice/Hermann_Estella_Luisa_Rechnung_20200805.txt', #missing geb:
   #     I                           '/tmp/mokabu/invoice/Preisig_Lukas_Rechnung_200925.txt') #missing geb:
     #for fn in fnLst:
     for path in sorted(plPath(srcPath).glob('*Rech*.txt')):
       fn=path.as_posix()
-      if fn.find('Zahlungserinnerung')>=0 or \
-         fn.find('Osei_Lawrence#Rechnung_mit_Tarifziffern_20191026.txt')>=0  or \
-         fn.find('Osei_Lawrence#Rechnung_mit_Tarifziffern_20200924.txtt')>=0:
-        print('parse_invoices(1): ignored:'+fn,file=sys.stderr)
-        continue
       fh=open(fn,'r')
       try:
         rec=ImportData.read_klient(fh)
-        db.append(rec)
-        keyKlient='\t'.join(rec[1][:3])
+        dbRawIvc.append(rec)
+
+        keyKlient=ImportData.gen_klient_key(rec[1][:3])
         keyPath=path.stem.split('#',1)[0]
-        lutKlient2Path[keyKlient]=keyPath
+        try:
+          keyPathOld=lutKlient2Path[keyKlient]
+        except KeyError:
+          lutKlient2Path[keyKlient]=keyPath
+        else:
+          if keyPathOld!=keyPath:
+            print("parse_invoices(1): Duplicate Keys: Error client:'%s' paths:'%s', '%s'"%(keyKlient,keyPathOld,keyPath),file=sys.stderr)
         print(fn,keyPath,keyKlient,file=self.log)
       except IOError as e:
         print(e, file=sys.stderr)
       fh.close()
 
   @staticmethod
+  def gen_klient_key(rec):
+    na,vo,geb=rec
+    if geb is None:
+      gebStr='None'
+    else:
+      #gebStr=time.strftime('%d.%m.%Y',time.gmtime(geb))
+      gebStr=str(geb)
+    return na+'#'+vo+'#'+gebStr
+
+  @staticmethod
   def read_klient(fh):
     while True:
-      l=getline(fh,'read_klient(1)')
+      l=getline(fh,'read_klient(1):%s:error_ "monika.kast-perry@psychologie.ch" not found')
       if l.find('monika.kast-perry@psychologie.ch')>=0:
         break
 
     rchAdr=list()
     while True:
-      l=getline(fh,'read_klient(2)')
+      l=getline(fh,'read_klient(2):%s:error_ "Zürich," not found')
       if l.startswith('Zürich,'):
         try:
-          rchDat=l.split(', ',1)[1]
+          rchDatStr=l.split(', ',1)[1]
         except BaseException as e:
           print(e, file=sys.stderr)
-          rchDat=None
+          rchDatStr=None
         break
       if len(l)>0:
         rchAdr.append(l)
 
     while True:
-      l=getline(fh,'read_klient(3)')
+      l=getline(fh,'read_klient(3):%s:error_ "geb:" not found')
       if l.find('geb:')>=0:
-        klient,geb=l.split('geb:')
-        geb=geb.strip()
-        if geb.find('AHV-Nr.')>=0:
-          geb,AHVNr=geb.split('AHV-Nr.')
-          geb=geb.split(', ',1)[0]
+        klient,gebDatStr=l.split('geb:')
+        gebDatStr=gebDatStr.strip()
+        if gebDatStr.find('AHV-Nr.')>=0:
+          gebDatStr,AHVNr=gebDatStr.split('AHV-Nr.')
+          gebDatStr=gebDatStr.split(', ',1)[0]
         else:
           AHVNr=None
 
         klient=klient.strip(', ')
         klient=klient.lstrip('Therapie für ')
         klNa,klVo=klient.rsplit(' ',1)
+        if klNa=='Nachname':
+          print('read_klient(4)'+fh.name+':error suspicious name:',(klNa,klVo),file=sys.stderr)
         break
 
     beh=list()
     while True:
-      l=getline(fh,'read_klient(4)')
+      l=getline(fh,'read_klient(5):%s:error_ "Ich bitte Sie," not found')
       if l.startswith('Ich bitte Sie,'):
         break
       if len(l)>0:
@@ -183,12 +225,24 @@ class ImportData:
     try:
         PLZ,Ort=PLZ_Ort.split(maxsplit=1)
     except ValueError as e:
-      print(e,'Error in PLZ_Ort:',PLZ_Ort, file=sys.stderr)
+      print('read_klient(6)'+fh.name+':error in PLZ_Ort:',PLZ_Ort,e,file=sys.stderr)
       PLZ=None
       Ort=PLZ_Ort
 
     #return (rchAdr,(klNa,klVo,geb),beh)
-    return ((Anrede,Name,Vorname,Adresse,Adresse1,Adresse2,PLZ,Ort),(klNa,klVo,geb,AHVNr),rchDat,beh)
+    try:
+      gebDat=dateconvert(gebDatStr)
+    except UserWarning as e:
+      print('read_klient(7)'+fh.name+':error in dateconvert:"%s"'%str(gebDatStr),file=sys.stderr)
+      gebDat=None
+    try:
+      rchDat=dateconvert(rchDatStr)
+    except UserWarning as e:
+      print('read_klient(7)'+fh.name+':error in dateconvert:"%s"'%str(rchDatStr),file=sys.stderr)
+      rchDat=None
+
+    return ((Anrede,Name,Vorname,Adresse,Adresse1,Adresse2,PLZ,Ort),(klNa,klVo,gebDat,AHVNr),rchDat,beh)
+
 
   @staticmethod
   def split_behandlung(behRaw):
@@ -209,7 +263,8 @@ class ImportData:
           else:
             z=z.replace('min','').strip(' .')
             t=t.replace('SFr','').strip(' .')
-          beh.append((rs[0],float(t),float(z),None,None))
+            d=dateconvert(rs[0])
+          beh.append((d,float(t),float(z),None,None))
 
     elif tuple(map(lambda x:x.strip(' :'),behRaw[0:4]))==('Datum','Inhalt','Minuten','Betrag') or \
          tuple(map(lambda x:x.strip(' :'),behRaw[0:4]))==('Datum','Inhalt','Zeit','Kosten') or \
@@ -225,7 +280,7 @@ class ImportData:
         for i in range(n):
           r=behRaw[4+4*i:8+4*i]
           #datum,tarif,zeit,Bemerkung,tarZif
-          d=r[0]
+          d=dateconvert(r[0])
           b=r[1]
           z=r[2].replace('min','')
           t=60*float(r[3].replace('CHF','').strip())/float(z)
@@ -247,7 +302,7 @@ class ImportData:
         for i in range(n):
           r=behRaw[6+6*i:12+6*i]
           #datum,tarif,zeit,Bemerkung,tarZif
-          d=r[0]
+          d=dateconvert(r[0])
           b=r[3]
           z=r[4].replace('min','').replace('Zeilen','').strip()
           t=60*float(r[5].replace('CHF','').strip())/float(z)
@@ -266,7 +321,7 @@ class ImportData:
         for i in range(n):
           r=behRaw[6+6*i:12+6*i]
           #datum,tarif,zeit,Bemerkung,tarZif
-          d=r[0]
+          d=dateconvert(r[0])
           b=r[3]
           z=float(r[4].strip())*15
           t=60*float(r[5].replace('CHF','').replace('Fr.','').strip())/float(z)
@@ -279,7 +334,7 @@ class ImportData:
 
   def parse_treatments(self,srcPath):
     print('--- parse_treatments ---')
-    self.dbTrt=dbTrt=dict()
+    self.dbRawTrt=dbRawTrt=dict()
     for path in sorted(plPath(srcPath).glob('*.txt')):
       fn=path.as_posix()
       fh=open(fn,'r')
@@ -287,12 +342,12 @@ class ImportData:
         rec=ImportData.read_verlauf(fh)
         print(fn,rec.keys(),file=self.log)
         key=path.stem.split('#')[0]
-        if key in dbTrt:
+        if key in dbRawTrt:
           print('duplicated keys:',key, file=sys.stderr)
-          print(dbTrt[key].keys() & rec.keys())
-          dbTrt[key].update(rec)
+          print(dbRawTrt[key].keys() & rec.keys())
+          dbRawTrt[key].update(rec)
         else:
-          dbTrt[key]=rec
+          dbRawTrt[key]=rec
         #print(rec[0],rec[1])
       except IOError as e:
         print(e, file=sys.stderr)
@@ -301,41 +356,41 @@ class ImportData:
   @staticmethod
   def read_verlauf(fh):
     rec=dict()
-    date=title=None;eintrag=[]
+    dateStr=title=None;eintrag=[]
     for l in fh.readlines():
       m=re.match('\d*\.\d*\.\d*',l)
       if m:
-        insert_verlauf(rec,date,title,eintrag)
+        insert_verlauf(rec,dateStr,title,eintrag,fh)
         try:
-          date,title=l.split(maxsplit=1)
+          dateStr,title=l.split(maxsplit=1)
         except ValueError as e:
-          print('read_verlauf(2)',e, file=sys.stderr)
+          print('read_verlauf(1):',fh.name,e, file=sys.stderr)
         eintrag=[]
       else:
         try:
           eintrag.append(l.strip())
         except UnboundLocalError as e:
-          print('read_verlauf(2)',fh.name,e,file=sys.stderr)
+          print('read_verlauf(2):',fh.name,e,file=sys.stderr)
           print(l.strip())
 
-    insert_verlauf(rec,date,title,eintrag)
+    insert_verlauf(rec,dateStr,title,eintrag,fh)
     return rec
 
   def rawdb2relational(self):
     print('--- rawdb2relational ---')
-    db=self.db
+    dbRawIvc=self.dbRawIvc
+    dbRawTrt=self.dbRawTrt
     self.lutKlient2pk=lutKlient2pk=dict() #database klienten
     self.dbKlient=dbKlient=list() #database klienten
     self.dbRch=dbRch=list() #database Rechnungen
     self.dbBeh=dbBeh=list() #database Behandlungen
     lutKlient2Path=self.lutKlient2Path
-    dbTrt=self.dbTrt
 
     idNewKlient=1
     idBeh=1
     idRch=1
-    for (rchAddr,client,rchDat,behRaw) in db:
-      keyKlient='\t'.join(client[:3])
+    for (rchAddr,client,rchDat,behRaw) in dbRawIvc:
+      keyKlient=ImportData.gen_klient_key(client[:3])
       try:
         pkKlient=lutKlient2pk[keyKlient]
       except KeyError:
@@ -347,10 +402,14 @@ class ImportData:
       dbRch.append((idRch,pkKlient,rchDat))
 
       #### analyze behandlung
-      behLst=ImportData.split_behandlung(behRaw)
+      try:
+        behLst=ImportData.split_behandlung(behRaw)
+      except UserWarning as e:
+        print('rawdb2relational(1):error in dateconvert:"',e,client,behRaw,file=sys.stderr)
+
       print(keyKlient, tuple(map(lambda x: x[0],behLst)),file=self.log)
       try:
-        trtDict=dbTrt[lutKlient2Path[keyKlient]]
+        trtDict=dbRawTrt[lutKlient2Path[keyKlient]]
       except KeyError:
         print('rawdb2relational(1) No akteneingtrag at all',keyKlient,file=sys.stderr)
         trtDict={}
@@ -360,16 +419,17 @@ class ImportData:
           #trt=trtDict[rec[0]]
           trt=trtDict.pop(beh[0])
         except KeyError:
-          print('rawdb2relational(2) No akteneingtrag',beh[0],keyKlient,file=sys.stderr)
+          #print('rawdb2relational(2):warning: no akteneingtrag',keyKlient,beh[0],time.strftime('%d.%m.%Y',time.gmtime(beh[0])),file=sys.stderr)
+          print('rawdb2relational(2):warning: no akteneingtrag',keyKlient,beh[0],file=sys.stderr)
           bem=verl=None
         else:
           bem=trt[0].strip()
           verl=trt[1]
         rec=[idBeh,idRch,pkKlient,];rec.extend(beh)
-        if rec[-2] is None:
+        if bem is not None:
+          #if rec[-2] is not None:
+          #  print('rawdb2relational(3):info: dupl Bemerkung:',keyKlient,(rec[-2],bem),file=sys.stderr)  #+rec[-2]+'|',bem+'|',file=sys.stderr)
           rec[-2]=bem
-        else:
-          print('rawdb2relational(3) dupl Bemerkung:|',beh[0],file=sys.stderr)#+rec[-2]+'|',bem+'|',file=sys.stderr)
         rec.append(verl)
         dbBeh.append(tuple(rec))
         idBeh+=1
@@ -381,7 +441,7 @@ class ImportData:
       vv=lutKlient2pk[k]
       lutPath2pk[v]=vv
 
-    for k,behDict in dbTrt.items():
+    for k,behDict in dbRawTrt.items():
       if len(behDict)>0:
         print(k,':',behDict.keys())
         for kDat,trt in behDict.items():

@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import time,os,platform,re
+import time,os,platform,re,sys
 import subprocess as spc
 import reportlab as rl
 import reportlab.lib as rll
@@ -74,14 +74,13 @@ class Invoice():
 
     story.append(rlp.Spacer(1,36))
     story.append(rlp.Paragraph(txt,styN))
-    txt='Zürich, %s'%datRng
+    txt='Zürich, %s'%dateconvert(datRng)
     story.append(rlp.Spacer(1,36))
     story.append(rlp.Paragraph(txt,styN))
     story.append(rlp.Spacer(1,36))
-    txt='''Rechnung für<br/>
-    <br/>
-    <b>%s %s, geb: %s'''%(klient[8:11])
-    if klient[11]: txt+=' AHV-Nr: %s'%klient[11]
+    txt='Rechnung für<br/><br/><b>%s %s'%(klient[8:10])
+    if klient[10] is not None: txt+=', geb: %s'%dateconvert(klient[10])
+    if klient[11]  is not None: txt+=' AHV-Nr: %s'%klient[11]
     txt+='</b>'
     story.append(rlp.Paragraph(txt,styN))
 
@@ -96,7 +95,7 @@ class Invoice():
         pBemerkung=rlp.Paragraph('<font size="8">'+Bemerkung+'</font>',styN)
       else:
         pBemerkung=''
-      data.append((datBehandlung,'%.2f'%Stundenansatz,'%d Min'%Dauer,pBemerkung,TarZif,'%.2f'%tot))
+      data.append((dateconvert(datBehandlung),'%.2f'%Stundenansatz,'%d Min'%Dauer,pBemerkung,TarZif,'%.2f'%tot))
     #pTotSum='%.2f'%totSum
     pTotSum=rlp.Paragraph('<b>%.2f</b>'%totSum,styR)
     data.append(('','','','','',pTotSum))
@@ -139,6 +138,23 @@ class Invoice():
   def publish(self):
     self.canvas.save()
     pass
+
+
+def dateconvert(dateIn,mode=0):
+  #input: 2005-02-25
+  #mode=0   25.02.2005
+  #mode=1   25.02.05
+  try:
+    dateStruct=time.strptime(dateIn,'%Y-%m-%d')
+  except (ValueError,TypeError) as e:
+    print('error in dateconvert:"%s"'%str(dateIn),file=sys.stderr)
+    return 'xx.xx.xx.'
+  if mode==0:
+    dateOut=time.strftime('%d.%m.%Y',dateStruct)
+  elif mode==1:
+    dateOut=time.strftime('%d.%m.%y',dateStruct)
+  return dateOut
+
 
 class TherapyProgress(rlp.SimpleDocTemplate):
 
@@ -190,19 +206,19 @@ class TherapyProgress(rlp.SimpleDocTemplate):
     #story.append(rlp.DocAssign('hdr',"nachname+' '+vorname"))
     if tel1 is None:tel1=''
     if eMail is None: eMail=''
-    story.append(rlp.Paragraph('<b>%s %s %s %s %s</b>'%(nachname,vorname,datGeb,tel1,eMail),styN))
+    story.append(rlp.Paragraph('<b>%s %s %s %s %s</b>'%(nachname,vorname,dateconvert(datGeb),tel1,eMail),styN))
     story.append(rlp.Spacer(1,18))
 
   def addTherapyProgress(self,date,title,treatment):
     (story,styN,styJ,styR,styC)=self.defaultVars
-    story.append(rlp.Paragraph('<b>%s %s</b>'%(date,title),styN))
+    story.append(rlp.Paragraph('<b>%s %s</b>'%(dateconvert(date,1),title),styN))
     story.append(rlp.Indenter(36,0))
 
     txt=str(treatment)
     p0=-1
     p3=0
     while True:
-      m=re.search('<p.*?>',txt[p3:])
+      m=re.search('<p\s+.*?>',txt[p3:])
       if m is None: break
       sp=m.span()
       p0=p3+sp[0];p1=p3+sp[1]
@@ -342,13 +358,13 @@ if __name__ == '__main__':
 
   def testInvoice(fn):
     lstKlient=\
-      (('Frau ', 'Saki', 'Karakurt', 'Meierwiesenstrasse 24', '', '', '8107', 'Buchs', 'Bayraktar', 'Aras', '15.02.2012', ''),
-       ('Familie', 'Preisig U. &', 'C.', 'Sihlaustr. 3', '', '', '8134', 'Adliswil', 'Radic Baumgartner', 'Ksenija', '18.06.1975', ''),)
+      (('Frau ', 'Saki', 'Karakurt', 'Meierwiesenstrasse 24', '', '', '8107', 'Buchs', 'Bayraktar', 'Aras', '2012-02-15', ''),
+       ('Familie', 'Preisig U. &', 'C.', 'Sihlaustr. 3', '', '', '8134', 'Adliswil', 'Radic Baumgartner', 'Ksenija', '1975-18-06', ''),)
     lstDatRng=\
-      (('17.03.2020'),('26.06.2020'),)
+      (('2020-03-17'),('2020-06-26'),)
     lstBeh=\
-        ((('15.05.2020', 142.0, 60.0, '', ''),('22.05.2020', 142.0, 60.0, '', ''),('29.05.2020', 142.0, 60.0, '', ''),('03.06.2020', 142.0, 60.0, '', ''),('12.06.2020', 142.0, 60.0, '', '')),
-         (('19.06.2020', 180.0, 60.0, '', ''),('31.07.2020', 180.0, 60.0, '', ''),('31.07.2020', 180.0, 60.0, '', ''),('06.08.2020', 180.0, 60.0, '', ''),('19.06.2020', 180.0, 60.0, '', ''),('31.07.2020', 180.0, 60.0, '', ''),('31.07.2020', 180.0, 60.0, '', ''),('06.08.2020', 180.0, 60.0, '', '')))
+        ((('2020-05-15', 142.0, 60.0, '', ''),('2020-05-22', 142.0, 60.0, '', ''),('2020-05-29', 142.0, 60.0, '', ''),('2020-06-03', 142.0, 60.0, '', ''),('2020-06-12', 142.0, 60.0, '', '')),
+         (('2020-06-19', 180.0, 60.0, '', ''),('2020-07-31', 180.0, 60.0, '', ''),('2020-07-31', 180.0, 60.0, '', ''),('2020-08-06', 180.0, 60.0, '', ''),('2020-06-19', 180.0, 60.0, '', ''),('2020-07-31', 180.0, 60.0, '', ''),('2020-07-31', 180.0, 60.0, '', ''),('2020-08-06', 180.0, 60.0, '', '')))
 
     rep=Invoice(fn)
     for i in range(2):
@@ -357,11 +373,11 @@ if __name__ == '__main__':
 
   def testTherapyProgress(fn):
     lstKlient=\
-      (('Bayraktar', 'Aras', '15.02.2012', '', ''),
-       ('Radic Baumgartner', 'Ksenija', '18.06.1975', '', ''),)
+      (('Bayraktar', 'Aras', '2012-02-15', '', ''),
+       ('Radic Baumgartner', 'Ksenija', '1975-06-18', '', ''),)
     lstBeh=\
-        ((('15.05.2020', 'title00', lorIps),('22.05.2020', 'title01', lorIps),('29.05.2020', 'title02', lorIps),('03.06.2020', 'title03', lorIps),('03.06.2020', 'title03', lorIps),('03.06.2020', 'title03', lorIps),('03.06.2020', 'title03', lorIps)),
-         (('19.06.2020', 'title10', lorIps),('31.07.2020', 'title11', lorIps),('31.07.2020', 'title12', '')))
+        ((('2020-05-15', 'title00', lorIps),('2020-05-22', 'title01', lorIps),('2020-05-29', 'title02', lorIps),('2020-06-03', 'title03', lorIps),('2020-06-03', 'title03', lorIps),('2020-06-03', 'title03', lorIps),('2020-06-03', 'title03', lorIps)),
+         (('2020-06-19', 'title10', lorIps),('2020-07-31', 'title11', lorIps),('2020-07-31', 'title12', '')))
 
     rep=TherapyProgress(fn)
     for i in range(2):

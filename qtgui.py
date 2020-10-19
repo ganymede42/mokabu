@@ -129,6 +129,7 @@ class WndClient(qtw.QWidget):
     for pkPers,naVo in itemsNaVo:
       cmpNaVo.append(naVo)
       cb.addItem(naVo,pkPers)
+    cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
     #cb.model()
     #cb.view()
 

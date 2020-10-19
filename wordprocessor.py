@@ -105,15 +105,15 @@ class MainWindow(QMainWindow):
     file_menu.addAction(open_file_action)
     file_toolbar.addAction(open_file_action)
 
-    save_file_action = QAction(QIcon(os.path.join('images', 'disk.png')), "Save", self)
-    save_file_action.setStatusTip("Save current page")
-    save_file_action.triggered.connect(self.record_save)
+    save_file_action = QAction(QIcon(os.path.join('images', 'disk.png')), "Save html", self)
+    save_file_action.setStatusTip("Save record as html")
+    save_file_action.triggered.connect(self.record_save_html)
     file_menu.addAction(save_file_action)
     file_toolbar.addAction(save_file_action)
 
-    saveas_file_action = QAction(QIcon(os.path.join('images', 'disk--pencil.png')), "Save As...", self)
-    saveas_file_action.setStatusTip("Save current page to specified file")
-    saveas_file_action.triggered.connect(self.file_saveas)
+    saveas_file_action = QAction(QIcon(os.path.join('images', 'disk--pencil.png')), "Save plain", self)
+    saveas_file_action.setStatusTip("Save record as plain text")
+    saveas_file_action.triggered.connect(self.record_save_txt)
     file_menu.addAction(saveas_file_action)
     file_toolbar.addAction(saveas_file_action)
 
@@ -382,7 +382,15 @@ class MainWindow(QMainWindow):
       self.editor.setText(txt[3])
       self.setWindowTitle("Therapy Progress: %s %s %s"%txt[0:3])
 
-  def record_save(self):
+  def record_save_txt(self):
+    app=QApplication.instance()
+    mkb=app.mkb
+    dbc=mkb.dbc
+    txt = self.editor.toPlainText()
+    mkb.dbc.execute('UPDATE tblBehandlung SET AktenEintrag=? WHERE pkBehandlung=?',(txt,self.pkBehandlung))
+    mkb.db.commit()
+
+  def record_save_html(self):
     app=QApplication.instance()
     mkb=app.mkb
     dbc=mkb.dbc
@@ -417,7 +425,7 @@ class MainWindow(QMainWindow):
       txt=txt[:p0]+'<'+f+'>'+txt[p1:].replace('</span>','</'+f+'>',1)
 
     #remove all remaning style attributes -> but this loses all spacing of the paragraphs...
-    txt=re.sub('\s*style=".*?"','',txt)
+    #txt=re.sub('\s*style=".*?"','',txt)
     #print(txt)
     mkb.dbc.execute('UPDATE tblBehandlung SET AktenEintrag=? WHERE pkBehandlung=?',(txt,self.pkBehandlung))
     mkb.db.commit()
