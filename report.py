@@ -13,6 +13,7 @@ import reportlab.pdfgen as rlpg
 import reportlab.pdfbase as rlpb
 import reportlab.pdfbase.ttfonts #else not visible
 
+
 def default_app_open(file):
   if platform.system() == 'Darwin':       # macOS
     spc.call(('open', file))
@@ -21,7 +22,13 @@ def default_app_open(file):
   else:                                   # linux variants
     spc.call(('xdg-open', file))
 
-
+class HeaderFooter(rlp.flowables.Flowable):
+  def __init__(self,txt):
+    self.txt=txt
+  def wrap(self,*args):
+    return (0,0)
+  def draw(self):
+    pass
 
 class Invoice():
 
@@ -44,8 +51,8 @@ class Invoice():
     brd=(1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm)#l,r,t,b
     l=brd[0];r=sz[0]-brd[1];t=sz[1]-brd[2];b=brd[3]
     canvas.setLineWidth(.3)
-    canvas.line(l,t,r,t)
-    canvas.line(l,b,r,b)
+    #canvas.line(l,t,r,t)
+    #canvas.line(l,b,r,b)
     brd=(1.4*rlu.cm,1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm)#l,r,t,b
 
     frm=rlp.Frame(brd[0],brd[3],sz[0]-brd[0]-brd[1],sz[1]-brd[2]-brd[3],showBoundary=0)
@@ -178,6 +185,8 @@ class TherapyProgress(rlp.SimpleDocTemplate):
     canvas.setAuthor('name')
     canvas.setTitle('title')
     canvas.setSubject('subj')
+    self.header='not yet a header'
+    self.clientPage=1
 
   def beforePage(self):
     canvas=self.canv
@@ -189,11 +198,29 @@ class TherapyProgress(rlp.SimpleDocTemplate):
     canvas.line(l,b,r,b)
     #could add a frame with personal header paragraph
     pageNumber = canvas.getPageNumber()
+    canvas.setFont("Helvetica",10)
     canvas.drawString(10*rlu.cm, rlu.cm, str(pageNumber))
 
   def afterPage(self):
     canvas=self.canv
-    #canvas.drawString(10*rlu.cm, 2*rlu.cm, self.header)
+    sz=rlps.A4
+    brd=(1.2*rlu.cm,1.2,1.2*rlu.cm,1.7*rlu.cm)#l,r,t,b
+    l=brd[0];r=sz[0]-brd[1];t=sz[1]-brd[2];b=brd[3]
+    canvas.drawString(10*rlu.cm, t+.2*rlu.cm, str(self.clientPage))
+    canvas.setFont("Helvetica-Bold",10)
+    canvas.drawRightString(r-2*rlu.cm, t+.2*rlu.cm, self.header)
+    self.clientPage+=1
+
+  def afterFlowable(self, flowable):
+    #if isinstance(flowable,rlp.Paragraph):
+    #  style=flowable.style.name
+    #  #txt=flowable.getPlainText()
+    #  txt=flowable.text
+    #  if txt.startswith('hdr'):
+    #    self.header=txt
+    if isinstance(flowable,HeaderFooter):
+      self.header=flowable.txt
+      self.clientPage=1
 
   def add(self,client,therapyLst):
     self.addClient(*client)
@@ -206,7 +233,9 @@ class TherapyProgress(rlp.SimpleDocTemplate):
     #story.append(rlp.DocAssign('hdr',"nachname+' '+vorname"))
     if tel1 is None:tel1=''
     if eMail is None: eMail=''
-    story.append(rlp.Paragraph('<b>%s %s %s %s %s</b>'%(nachname,vorname,dateconvert(datGeb),tel1,eMail),styN))
+    header='%s %s %s %s %s'%(nachname,vorname,dateconvert(datGeb),tel1,eMail)
+    story.append(HeaderFooter(header))
+    story.append(rlp.Paragraph('<b>'+header+'</b>',styN))
     story.append(rlp.Spacer(1,18))
 
   def addTherapyProgress(self,date,title,treatment):
@@ -396,8 +425,8 @@ if __name__ == '__main__':
   #playground(fn%idx,lorIps)
   #default_app_open(fn%idx);idx+=1
 
-  testInvoice(fn%idx)
-  default_app_open(fn%idx);idx+=1
+  #testInvoice(fn%idx)
+  #default_app_open(fn%idx);idx+=1
 
   testTherapyProgress(fn%idx)
   default_app_open(fn%idx);idx+=1
