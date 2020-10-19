@@ -150,7 +150,7 @@ class WndClient(qtw.QWidget):
     fldLst.append(w)
     loF.addRow('Bemerkung',w)
 
-    for txt,func in (("Behandlungen",None),("Rechnungen",None),("Report Treatment",self.OnRptTreatmentProgress)):
+    for txt,func in (("Behandlungen",self.OnWndTreatment),("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
       btn=qtw.QPushButton(txt,self)
       if func is not None:
         btn.clicked.connect(func)
@@ -180,6 +180,165 @@ class WndClient(qtw.QWidget):
     curData=self.cbNaVo.currentData()
     app.mkb.report_therapy_progress('pkPerson=%d'%curData)
 
+  def OnWndTreatment(self):
+    wnd=WndTreatment(self,'WndTreatment')
+    sub=qtw.QMdiSubWindow()
+    sub.setWidget(wnd)
+    #sub.setWindowTitle("subwindow"+str(MainWindow.count))
+    self.parent().parent().parent().parent().mdi.addSubWindow(sub)
+    sub.show()
+
+  def OnWndInvoice(self):
+    wnd=WndInvoice(self,'WndInvoice')
+    sub=qtw.QMdiSubWindow()
+    sub.setWidget(wnd)
+    #sub.setWindowTitle("subwindow"+str(MainWindow.count))
+    self.parent().parent().parent().parent().mdi.addSubWindow(sub)
+    sub.show()
+
+
+class WndTreatment(qtw.QWidget):
+  def __init__(self,wndClient,title,geometry=(100,100,800,500)):
+    super(WndTreatment,self).__init__()
+    self.setGeometry(*geometry)
+    pkPerson=wndClient.cbNaVo.currentData()
+    self.setWindowTitle(title)
+
+    #https://doc-snapshots.qt.io/qt5-5.15/qformlayout.html
+    loV=qtw.QVBoxLayout(self)
+    loH=qtw.QHBoxLayout()
+    loF=qtw.QFormLayout()
+
+    loV.addLayout(loF)
+    loV.addLayout(loH)
+    self.cbTrt=cb=qtw.QComboBox()
+
+    app=qtw.QApplication.instance()
+    self.dbc=dbc=app.mkb.db.cursor()
+    itemsTrt=dbc.execute('SELECT pkBehandlung, datBehandlung FROM tblBehandlung WHERE fkPerson=%d'%pkPerson).fetchall()
+
+    #items=["Java","C#","Python"]
+    cb.setEditable(True)
+    #v=qtg.QIntValidator(100, 999, self) #QValidator()
+    #cb.setValidator(v)
+    #cb.InsertPolicy(qtw.QComboBox.NoInsert) does not work
+    cmpTrt=[]
+    for pkTrt,datTrt in itemsTrt:
+      cmpTrt.append(datTrt)
+      cb.addItem(datTrt,pkTrt)
+    cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
+    #cb.model()
+    #cb.view()
+
+    cpl=qtw.QCompleter(cmpTrt)
+    #cpl=qtw.QCompleter(cb.model())
+    cb.setCompleter(cpl)
+    cb.currentIndexChanged.connect(self.cbSelChanged)
+
+    loF.addRow('Suche',cb)
+    self.fldLst=fldLst=list()
+
+    for txt in ('pkBehandlung','fkRechnung','fkPerson','datBehandlung','Dauer','Stundenansatz','Bemerkung','TarZif'):
+      w=qtw.QLineEdit()
+      fldLst.append(w)
+      loF.addRow(txt,w)
+
+    w=qtw.QTextEdit()
+    fldLst.append(w)
+    loF.addRow('AktenEintrag',w)
+
+    #for txt,func in (("Behandlungen",self.OnWndTreatment),("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
+    #  btn=qtw.QPushButton(txt,self)
+    #  if func is not None:
+    #    btn.clicked.connect(func)
+    #  loH.addWidget(btn)
+
+  def cbSelChanged(self,i):
+    cb=self.cbTrt
+    curData=cb.currentData()
+    print("cbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
+    if cb.currentData() is None:
+      print("TODO:New Person inserted")
+      cb.removeItem(i)
+    else:
+      dbc=self.dbc
+      d=dbc.execute('SELECT * FROM tblBehandlung WHERE pkBehandlung=%d'%curData).fetchone()
+      print(d)
+      for w,d in zip(self.fldLst,d):
+        if d is None:
+          d=''
+        else:
+          d=str(d)
+        w.setText(d)
+
+class WndInvoice(qtw.QWidget):
+  def __init__(self,wndClient,title,geometry=(100,100,400,500)):
+    super(WndInvoice,self).__init__()
+    self.setGeometry(*geometry)
+    pkPerson=wndClient.cbNaVo.currentData()
+    self.setWindowTitle(title)
+
+    #https://doc-snapshots.qt.io/qt5-5.15/qformlayout.html
+    loV=qtw.QVBoxLayout(self)
+    loH=qtw.QHBoxLayout()
+    loF=qtw.QFormLayout()
+
+    loV.addLayout(loF)
+    loV.addLayout(loH)
+    self.cbRng=cb=qtw.QComboBox()
+    #self.cbNaVoPkPers
+
+    app=qtw.QApplication.instance()
+    self.dbc=dbc=app.mkb.db.cursor()
+    itemsRng=dbc.execute('SELECT pkRechnung, datRechnung FROM tblRechnung WHERE fkPerson=%d'%pkPerson).fetchall()
+    cb.setEditable(True)
+    cmpRng=[]
+    for pkRng, datRng in itemsRng:
+      cmpRng.append(datRng)
+      cb.addItem(datRng,pkRng)
+    cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
+    #cb.model()
+    #cb.view()
+    cpl=qtw.QCompleter(cmpRng)
+    #cpl=qtw.QCompleter(cb.model())
+    cb.setCompleter(cpl)
+    cb.currentIndexChanged.connect(self.cbSelChanged)
+
+    loF.addRow('Suche',cb)
+    self.fldLst=fldLst=list()
+
+    for txt in ('pkRechnung','fkPerson','datRechnung','datGedruckt','datBezahlt'):
+      w=qtw.QLineEdit()
+      fldLst.append(w)
+      loF.addRow(txt,w)
+
+    w=qtw.QTextEdit()
+    fldLst.append(w)
+    loF.addRow('Bemerkung',w)
+
+    #for txt,func in (("Behandlungen",self.OnWndTreatment),("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
+    #  btn=qtw.QPushButton(txt,self)
+    #  if func is not None:
+    #    btn.clicked.connect(func)
+    #  loH.addWidget(btn)
+
+  def cbSelChanged(self,i):
+    cb=self.cbRng
+    curData=cb.currentData()
+    print("cbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
+    if cb.currentData() is None:
+      print("TODO:New Person inserted")
+      cb.removeItem(i)
+    else:
+      dbc=self.dbc
+      d=dbc.execute('SELECT * FROM tblRechnung WHERE pkRechnung=%d'%curData).fetchone()
+      print(d)
+      for w,d in zip(self.fldLst,d):
+        if d is None:
+          d=''
+        else:
+          d=str(d)
+        w.setText(d)
 
 class WndMain(qtw.QMainWindow):
 

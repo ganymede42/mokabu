@@ -199,7 +199,7 @@ class TherapyProgress(rlp.SimpleDocTemplate):
     #could add a frame with personal header paragraph
     pageNumber = canvas.getPageNumber()
     canvas.setFont("Helvetica",10)
-    canvas.drawString(10*rlu.cm, rlu.cm, str(pageNumber))
+    #canvas.drawString(10*rlu.cm, rlu.cm, str(pageNumber))
 
   def afterPage(self):
     canvas=self.canv
@@ -212,12 +212,6 @@ class TherapyProgress(rlp.SimpleDocTemplate):
     self.clientPage+=1
 
   def afterFlowable(self, flowable):
-    #if isinstance(flowable,rlp.Paragraph):
-    #  style=flowable.style.name
-    #  #txt=flowable.getPlainText()
-    #  txt=flowable.text
-    #  if txt.startswith('hdr'):
-    #    self.header=txt
     if isinstance(flowable,HeaderFooter):
       self.header=flowable.txt
       self.clientPage=1
@@ -235,7 +229,7 @@ class TherapyProgress(rlp.SimpleDocTemplate):
     if eMail is None: eMail=''
     header='%s %s %s %s %s'%(nachname,vorname,dateconvert(datGeb),tel1,eMail)
     story.append(HeaderFooter(header))
-    story.append(rlp.Paragraph('<b>'+header+'</b>',styN))
+    #story.append(rlp.Paragraph('<b>'+header+'</b>',styN))
     story.append(rlp.Spacer(1,18))
 
   def addTherapyProgress(self,date,title,treatment):
@@ -267,7 +261,7 @@ class TherapyProgress(rlp.SimpleDocTemplate):
       story.append(rlp.Paragraph(txt[p1:p2],sty))
     if p0==-1: # no html text
       txt=re.sub('\n','<br/>',txt)
-      story.append(rlp.Paragraph(txt,styN))
+      story.append(rlp.Paragraph(txt,styJ))
 
     story.append(rlp.Indenter(-36,0))
     story.append(rlp.Spacer(1,12))
