@@ -47,24 +47,23 @@ class MoKaBu:
     except lite.Error as e:
         print(schema+" Error %s:" % e.args[0])
 
-  def report_invoice(self):
+  def report_invoice(self, sqlFilt=None,fn='invoice.pdf'):
     db=self.db
     dbcRng=self.dbc
     dbcBeh=db.cursor()
-    sqlRng='''SELECT tr.pkRechnung,tr.datRechnung,RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,RngAdresse2,PLZ,Ort,Nachname,Vorname,datGeb,AHVNr
-    FROM tblRechnung tr LEFT JOIN tblPerson tp on tr.fkPerson=tp.pkPerson
-    ORDER BY tr.pkRechnung'''
+    sqlTplRng='''SELECT tr.pkRechnung,tr.datRechnung,RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,RngAdresse2,PLZ,Ort,Nachname,Vorname,datGeb,AHVNr
+    FROM tblRechnung tr LEFT JOIN tblPerson tp on tr.fkPerson=tp.pkPerson'''
+    sqlTplOrd='ORDER BY tr.pkRechnung'''
+
+    if sqlFilt is None:
+      sqlRng=sqlTplRng+' '+sqlTplOrd
+    else:
+      sqlRng=sqlTplRng+' WHERE '+sqlFilt+' '+sqlTplOrd
 
     sqlTplBeh='''SELECT datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif FROM tblBehandlung tb
     WHERE tb.fkRechnung=%s
     ORDER BY tb.datBehandlung'''
 
-#    sql='''SELECT tp.* ,tr.pkRechnung,tr.datRechnung,tb.Dauer,tb.Stundenansatz,
-#tb.Dauer*tb.Stundenansatz/60 AS tot
-#FROM tblBehandlung tb LEFT JOIN tblRechnung tr ON tb.fkRechnung=tr.pkRechnung LEFT JOIN tblPerson tp on tb.fkPerson =tp.pkPerson
-#ORDER BY tr.pkRechnung, tb.datBehandlung'''
-
-    fn='invoice.pdf'
     repIvc=report.Invoice(fn)
 
     for recRng in dbcRng.execute(sqlRng):

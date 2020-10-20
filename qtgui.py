@@ -25,9 +25,9 @@ def MainApp(mkb):
 
   #mainWnd.OnQryClient()
 
-  wpWnd=wp.MainWindow()
-  wpWnd.record_open(1)
-  WndChildAdd(wpWnd)
+  #wpWnd=wp.MainWindow()
+  #wpWnd.record_open(1)
+  #WndChildAdd(wpWnd)
   #app.topLevelWindows()
   #app.topLevelWidgets()
   sys.exit(app.exec_())
@@ -54,6 +54,12 @@ def AddMenuAction(widget,parentMenu,txt,func):
   actQuit.triggered.connect(func)
   parentMenu.addAction(actQuit)
   return actQuit
+
+
+def SqlWidget(txt,qWndType):
+  w=qWndType()
+  w.setWindowTitle(txt)
+  return w
 
 
 #class WndSqlTblView(qtw.QDialog):
@@ -142,16 +148,19 @@ class WndClient(qtw.QWidget):
     loF.addRow('Suche',cb)
     self.fldLst=fldLst=list()
 
-    for txt in ('pkPerson','RngAnrede','RngNachname','RngVorname','RngAdresse','RngAdresse1','RngAdresse2','PLZ','Ort','Nachname','Vorname','Tel1','Tel2','datGeb','eMail','AHVNr'):
-      w=qtw.QLineEdit()
+    for desc in ('pkPerson','RngAnrede','RngNachname','RngVorname','RngAdresse',
+                'RngAdresse1','RngAdresse2','PLZ','Ort','Nachname',
+                'Vorname','Tel1','Tel2','datGeb','eMail','AHVNr',
+                ('Bemerkung',qtw.QTextEdit) ):
+      if type(desc)==str:
+        txt=desc;qWndType=qtw.QLineEdit
+      else:
+        txt,qWndType=desc
+      w=SqlWidget(txt,qWndType)
       fldLst.append(w)
       loF.addRow(txt,w)
 
-    w=qtw.QTextEdit()
-    fldLst.append(w)
-    loF.addRow('Bemerkung',w)
-
-    for txt,func in (("Behandlungen",self.OnWndTreatment),("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
+    for txt,func in (("Behandlungen",self.OnWndTreatment),("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress),("Save",self.OnSave)):
       btn=qtw.QPushButton(txt,self)
       if func is not None:
         btn.clicked.connect(func)
@@ -160,14 +169,14 @@ class WndClient(qtw.QWidget):
   def cbSelChanged(self,i):
     cb=self.cbNaVo
     curData=cb.currentData()
-    print("cbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
+    #print("cbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
     if cb.currentData() is None:
       print("TODO:New Person inserted")
       cb.removeItem(i)
     else:
       dbc=self.dbc
       d=dbc.execute('SELECT * FROM tblPerson WHERE pkPerson=%d'%curData).fetchone()
-      print(d)
+      #print(d)
       for w,d in zip(self.fldLst,d):
         if d is None:
           d=''
@@ -203,6 +212,13 @@ class WndClient(qtw.QWidget):
     self.parent().parent().parent().parent().mdi.addSubWindow(sub)
     sub.show()
 
+  def OnSave(self):
+    #d=dbc.execute('SELECT * FROM tblPerson WHERE pkPerson=%d'%curData).fetchone()
+    #print(d)
+    for w in self.fldLst:
+      fld=w.windowTitle()
+      txt=w.text()
+      print('UPDATE %s with %s'%(fld,txt))
 
 class WndTreatment(qtw.QWidget):
   def __init__(self,sqlFilter=None,title='WndTreatment',geometry=(100,100,800,500)):
@@ -241,37 +257,47 @@ class WndTreatment(qtw.QWidget):
     self.fldLst=fldLst=list()
 
     for txt in ('pkBehandlung','fkRechnung','fkPerson','datBehandlung','Dauer','Stundenansatz','Bemerkung','TarZif'):
-      w=qtw.QLineEdit()
+      w=qtw.QLineEdit();w.setWindowTitle(txt)
       fldLst.append(w)
       loF.addRow(txt,w)
 
-    w=qtw.QTextEdit()
+    txt='AktenEintrag'
+    w=qtw.QTextEdit();w.setWindowTitle(txt)
     fldLst.append(w)
-    loF.addRow('AktenEintrag',w)
+    loF.addRow(txt,w)
 
-    #for txt,func in (("Behandlungen",self.OnWndTreatment),("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
-    #  btn=qtw.QPushButton(txt,self)
-    #  if func is not None:
-    #    btn.clicked.connect(func)
-    #  loH.addWidget(btn)
+    for txt,func in (("Behandlungen",self.OnWndTreatment),):#("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
+      btn=qtw.QPushButton(txt,self)
+      if func is not None:
+        btn.clicked.connect(func)
+      loH.addWidget(btn)
+
 
   def cbSelChanged(self,i):
     cb=self.cbTrt
     curData=cb.currentData()
-    print("cbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
+    #print("cbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
     if cb.currentData() is None:
       print("TODO:New Person inserted")
       cb.removeItem(i)
     else:
       dbc=self.dbc
       d=dbc.execute('SELECT * FROM tblBehandlung WHERE pkBehandlung=%d'%curData).fetchone()
-      print(d)
+      #print(d)
       for w,d in zip(self.fldLst,d):
         if d is None:
           d=''
         else:
           d=str(d)
         w.setText(d)
+
+  def OnWndTreatment(self):
+    cb=self.cbTrt
+    pkBehandlung=cb.currentData()
+    wpWnd=wp.MainWindow()
+    wpWnd.record_open(pkBehandlung)
+    WndChildAdd(wpWnd)
+
 
 class WndInvoice(qtw.QWidget):
   def __init__(self,sqlFilter=None,title='WndInvoice',geometry=(100,100,800,500)):
@@ -294,9 +320,9 @@ class WndInvoice(qtw.QWidget):
     self.dbc=dbc=app.mkb.db.cursor()
     sqlQry='SELECT pkRechnung, datRechnung FROM tblRechnung'
     if sqlFilter is not None: sqlQry+=' '+sqlFilter
-    sqlQry+=' ORDER fkPerson,datRechnung'
+    sqlQry+=' ORDER BY fkPerson,datRechnung'
 
-    itemsRng=dbc.execute(' WHERE fkPerson=%d'%pkPerson).fetchall()
+    itemsRng=dbc.execute(sqlQry).fetchall()
     cb.setEditable(True)
     cmpRng=[]
     for pkRng, datRng in itemsRng:
@@ -322,29 +348,63 @@ class WndInvoice(qtw.QWidget):
     fldLst.append(w)
     loF.addRow('Bemerkung',w)
 
-    #for txt,func in (("Behandlungen",self.OnWndTreatment),("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
-    #  btn=qtw.QPushButton(txt,self)
-    #  if func is not None:
-    #    btn.clicked.connect(func)
-    #  loH.addWidget(btn)
+    #Adding sql table for treatments
+    self.mdl=mdl = qtdb.QSqlTableModel()
+    #qry=qtdb.QSqlQuery('SELECT * from tblBehandlung')
+    #mdl.setQuery(qry)
+    mdl.setEditStrategy(qtdb.QSqlTableModel.OnFieldChange)
+    mdl.select()
+    #mdl.setHeaderData(0,qtc.Qt.Horizontal,'pkPerson')
+    self.tbl=view=qtw.QTableView()
+    view.setModel(mdl)
+    vh=view.verticalHeader()
+    vh.setDefaultSectionSize(22)
+    #vh.setCascadingSectionResizes(True)
+    vh.setMinimumSectionSize(16)
+    loF.addRow('Behandlungen',view)
+
+    #for txt,func in (("Behandlungen",self.OnWndTreatment),("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress),("Save",self.OnSave)):
+    for txt,func in (("Report Invoice",self.OnRptInvoice),("Save",self.OnSave)):
+      btn=qtw.QPushButton(txt,self)
+      if func is not None:
+        btn.clicked.connect(func)
+      loH.addWidget(btn)
 
   def cbSelChanged(self,i):
     cb=self.cbRng
     curData=cb.currentData()
-    print("cbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
+    #print("cbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
     if cb.currentData() is None:
       print("TODO:New Person inserted")
       cb.removeItem(i)
     else:
       dbc=self.dbc
       d=dbc.execute('SELECT * FROM tblRechnung WHERE pkRechnung=%d'%curData).fetchone()
-      print(d)
+      #print(d)
       for w,d in zip(self.fldLst,d):
         if d is None:
           d=''
         else:
           d=str(d)
         w.setText(d)
+    mdl=self.mdl
+    qry=qtdb.QSqlQuery('SELECT pkBehandlung,fkRechnung,fkPerson,datBehandlung,Dauer,Stundenansatz,Bemerkung,TarZif FROM tblBehandlung WHERE fkRechnung=%d'%curData)
+    mdl.setQuery(qry)
+
+
+  def OnRptInvoice(self):
+    print('OnRptInvoice')
+    app=qtw.QApplication.instance()
+    curData=self.cbRng.currentData()
+    app.mkb.report_invoice('pkRechnung=%d'%curData)
+
+  def OnSave(self):
+    #d=dbc.execute('SELECT * FROM tblPerson WHERE pkPerson=%d'%curData).fetchone()
+    #print(d)
+    for w in self.fldLst:
+      fld=w.windowTitle()
+      txt=w.text()
+      print('UPDATE %s with %s'%(fld,txt))
 
 class WndMain(qtw.QMainWindow):
 

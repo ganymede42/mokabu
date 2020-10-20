@@ -450,7 +450,6 @@ class ImportData:
         for kDat,trt in behDict.items():
           pkKlient=lutPath2pk.get(k)
           if pkKlient is None:
-            print('unknown key:',k)
             print('rawdb2relational(4) unknown key:',k,file=sys.stderr)
 
           bem=trt[0].strip()
