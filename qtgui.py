@@ -28,7 +28,8 @@ def MainApp(mkb):
   wpWnd=wp.MainWindow()
   wpWnd.record_open(1)
   WndChildAdd(wpWnd)
-
+  #app.topLevelWindows()
+  #app.topLevelWidgets()
   sys.exit(app.exec_())
 
 def WndChildAdd(wnd):
@@ -181,7 +182,10 @@ class WndClient(qtw.QWidget):
     app.mkb.report_therapy_progress('pkPerson=%d'%curData)
 
   def OnWndTreatment(self):
-    wnd=WndTreatment(self,'WndTreatment')
+    cb=self.cbNaVo
+    pkPerson=cb.currentData()
+    perStr=cb.currentText()
+    wnd=WndTreatment('WHERE fkPerson=%d'%pkPerson,'WndTreatment: %s'%perStr)
     sub=qtw.QMdiSubWindow()
     sub.setWidget(wnd)
     #sub.setWindowTitle("subwindow"+str(MainWindow.count))
@@ -189,7 +193,10 @@ class WndClient(qtw.QWidget):
     sub.show()
 
   def OnWndInvoice(self):
-    wnd=WndInvoice(self,'WndInvoice')
+    cb=self.cbNaVo
+    pkPerson=cb.currentData()
+    perStr=cb.currentText()
+    wnd=WndInvoice('WHERE fkPerson=%d'%pkPerson,'WndInvoice: %s'%perStr)
     sub=qtw.QMdiSubWindow()
     sub.setWidget(wnd)
     #sub.setWindowTitle("subwindow"+str(MainWindow.count))
@@ -198,10 +205,10 @@ class WndClient(qtw.QWidget):
 
 
 class WndTreatment(qtw.QWidget):
-  def __init__(self,wndClient,title,geometry=(100,100,800,500)):
+  def __init__(self,sqlFilter=None,title='WndTreatment',geometry=(100,100,800,500)):
     super(WndTreatment,self).__init__()
     self.setGeometry(*geometry)
-    pkPerson=wndClient.cbNaVo.currentData()
+    self.sqlFilter=sqlFilter
     self.setWindowTitle(title)
 
     #https://doc-snapshots.qt.io/qt5-5.15/qformlayout.html
@@ -215,23 +222,18 @@ class WndTreatment(qtw.QWidget):
 
     app=qtw.QApplication.instance()
     self.dbc=dbc=app.mkb.db.cursor()
-    itemsTrt=dbc.execute('SELECT pkBehandlung, datBehandlung FROM tblBehandlung WHERE fkPerson=%d'%pkPerson).fetchall()
+    sqlQry='SELECT pkBehandlung, datBehandlung FROM tblBehandlung'
+    if sqlFilter is not None: sqlQry+=' '+sqlFilter
+    sqlQry+=' ORDER BY fkPerson,datBehandlung'
+    itemsTrt=dbc.execute(sqlQry).fetchall()
 
-    #items=["Java","C#","Python"]
     cb.setEditable(True)
-    #v=qtg.QIntValidator(100, 999, self) #QValidator()
-    #cb.setValidator(v)
-    #cb.InsertPolicy(qtw.QComboBox.NoInsert) does not work
     cmpTrt=[]
     for pkTrt,datTrt in itemsTrt:
       cmpTrt.append(datTrt)
       cb.addItem(datTrt,pkTrt)
     cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
-    #cb.model()
-    #cb.view()
-
     cpl=qtw.QCompleter(cmpTrt)
-    #cpl=qtw.QCompleter(cb.model())
     cb.setCompleter(cpl)
     cb.currentIndexChanged.connect(self.cbSelChanged)
 
@@ -272,10 +274,10 @@ class WndTreatment(qtw.QWidget):
         w.setText(d)
 
 class WndInvoice(qtw.QWidget):
-  def __init__(self,wndClient,title,geometry=(100,100,400,500)):
+  def __init__(self,sqlFilter=None,title='WndInvoice',geometry=(100,100,800,500)):
     super(WndInvoice,self).__init__()
     self.setGeometry(*geometry)
-    pkPerson=wndClient.cbNaVo.currentData()
+    self.sqlFilter=sqlFilter
     self.setWindowTitle(title)
 
     #https://doc-snapshots.qt.io/qt5-5.15/qformlayout.html
@@ -290,7 +292,11 @@ class WndInvoice(qtw.QWidget):
 
     app=qtw.QApplication.instance()
     self.dbc=dbc=app.mkb.db.cursor()
-    itemsRng=dbc.execute('SELECT pkRechnung, datRechnung FROM tblRechnung WHERE fkPerson=%d'%pkPerson).fetchall()
+    sqlQry='SELECT pkRechnung, datRechnung FROM tblRechnung'
+    if sqlFilter is not None: sqlQry+=' '+sqlFilter
+    sqlQry+=' ORDER fkPerson,datRechnung'
+
+    itemsRng=dbc.execute(' WHERE fkPerson=%d'%pkPerson).fetchall()
     cb.setEditable(True)
     cmpRng=[]
     for pkRng, datRng in itemsRng:

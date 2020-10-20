@@ -72,8 +72,8 @@ class ImportData:
   def docx2txt_invoices(srcPath,dstPath):
     print('--- docx2txt_invoices ---')
     os.makedirs(dstPath,exist_ok=True)
-    print('reading files '+srcPath+'/*Rech*.doc*')
-    for path in plPath(srcPath).rglob('*Rech*.doc*'):
+    print('reading files '+srcPath+'/*Rechnung*.doc*')
+    for path in plPath(srcPath).rglob('*Rechnung*.doc*'):
       if path.name.startswith('.~lock') or path.name.startswith('~$') or\
         path.name.find('Zahlungserinnerung')>=0:
         print('docx2txt_invoices(1): ignored:'+path.as_posix(),file=sys.stderr)
@@ -90,9 +90,9 @@ class ImportData:
   @staticmethod
   def docx2txt_treatments(srcPath,dstPath):
     print('--- docx2txt_treatments ---')
-    print('reading files '+srcPath+'/*Verl*.doc*')
+    print('reading files '+srcPath+'/*Verlauf*.doc*')
     os.makedirs(dstPath,exist_ok=True)
-    for path in plPath(srcPath).rglob('*Verl*.doc*'):
+    for path in plPath(srcPath).rglob('*Verlauf*.doc*'):
       if path.name.startswith('.~lock') or path.name.startswith('~$'):
         print('docx2txt_invoices(1): ignored:'+path.name,file=sys.stderr)
         continue #ignore
@@ -194,7 +194,7 @@ class ImportData:
     beh=list()
     while True:
       l=getline(fh,'read_klient(5):%s:error_ "Ich bitte Sie," not found')
-      if l.startswith('Ich bitte Sie,'):
+      if l.startswith('Ich bitte Sie,') or l.startswith('Bitte überweisen Sie'):
         break
       if len(l)>0:
         beh.append(l)
@@ -250,11 +250,13 @@ class ImportData:
     #tarif preis pro 60 min
     #zeit in minuten
     #datum,tarif,zeit,Bemerkung,tarZif
-    if tuple(map(lambda x : x.strip(' :'),behRaw[0].split('\t')))==('Daten', 'Minuten / Ansatz pro h', 'Kosten', 'Total') or \
-       tuple(map(lambda x:x.strip(' :'),behRaw[0].split('\t')))==('Daten','Minuten / Ansatz','Kosten','Total'):
+    tpl=tuple(map(lambda x:x.strip(' :'),behRaw[0].strip().split('\t')))
+    if tpl==('Daten','Minuten / Ansatz pro h','Kosten','Total') or\
+       tpl==('Daten','Minuten / Ansatz pro 1h','Kosten','Total') or\
+       tpl==('Daten','Minuten / Ansatz','Kosten','Total'):
         #print('format 1')
         for r in behRaw[1:]:
-          if r=='\t': continue
+          if r.strip()=='': continue
           rs=r.split('\t')
           try:
             z,t=rs[1].split('/')[-2:]
@@ -289,7 +291,8 @@ class ImportData:
     elif tuple(map(lambda x:x.strip(' :'),behRaw[0:6]))==('Datum','Tarif','Tarifziffer','Inhalt','Minuten','Betrag') or \
         tuple(map(lambda x:x.strip(' :'),behRaw[0:6]))==('Datum','Tarif','Tarifziffer','Inhalt','Zeit in Min','Kosten') or \
         tuple(map(lambda x:x.strip(' :'),behRaw[0:6]))==('Datum','Tarif','Tarifziffer','Inhalt','Zeit in Min','Betrag') or \
-        tuple(map(lambda x:x.strip(' :'),behRaw[0:6]))==('Datum','Tarif','Tarifziffer','Inhalt','Zeit','Kosten'):
+        tuple(map(lambda x:x.strip(' :'),behRaw[0:6]))==('Datum','Tarif','Tarifziffer','Inhalt','Zeit','Kosten') or\
+        tuple(map(lambda x:x.strip(' :'),behRaw[0:6]))==('Datum','Tarif','Tarifziffer','Inhalt','Zeit in min','Kosten') :
         #print('format 3')
         n=(len(behRaw)-6-5)//6
         if len(behRaw)!=n*6+6+5:
