@@ -61,6 +61,33 @@ def SqlWidget(txt,qWndType):
   w.setWindowTitle(txt)
   return w
 
+class MdiArea(qtw.QMdiArea):
+
+  def __init__(self,background_pixmap,parent=None):
+
+    qtw.QMdiArea.__init__(self,parent)
+    self.background_pixmap=background_pixmap
+    self.centered=False
+
+  def paintEvent(self,event):
+
+    painter=qtg.QPainter()
+    painter.begin(self.viewport())
+
+    if not self.centered:
+      painter.drawPixmap(0,0,self.width(),self.height(),self.background_pixmap)
+    else:
+      painter.fillRect(event.rect(),self.palette().color(qtg.QPalette.Window))
+      x=(self.width()-self.display_pixmap.width())/2
+      y=(self.height()-self.display_pixmap.height())/2
+      painter.drawPixmap(x,y,self.display_pixmap)
+
+    painter.end()
+
+  def resizeEvent(self,event):
+
+    self.display_pixmap=self.background_pixmap.scaled(event.size(),qtc.Qt.KeepAspectRatio)
+
 
 #class WndSqlTblView(qtw.QDialog):
 class WndSqlTblView(qtw.QWidget):
@@ -412,8 +439,11 @@ class WndMain(qtw.QMainWindow):
     super(WndMain,self).__init__()
     self.setGeometry(150,150,1300,900)
     self.setWindowTitle("MoKaBu")
+    self.setWindowIcon(qtg.QIcon('logo_monika.ico'))
     #self.setWindowIcon(qtw.QIcon('pythonlogo.png'))
-    self.mdi=qtw.QMdiArea()
+    #self.mdi=qtw.QMdiArea()
+    self.mdi=mdi=MdiArea(qtg.QPixmap('Logo_Monika.png'));mdi.centered=True
+
     self.setCentralWidget(self.mdi)
 
     mainMenu=self.menuBar()
