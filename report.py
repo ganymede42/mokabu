@@ -485,6 +485,12 @@ if __name__ == '__main__':
     rep.publish()
 
 
+  import argparse
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-m', '--mode', type=int, help='mode bits', default=0xff)
+  args = parser.parse_args()
+  print(args)
+
   fn='test%d.pdf'
   idx=0
   #test1(fn%idx)
@@ -492,12 +498,13 @@ if __name__ == '__main__':
 
   #playground(fn%idx,lorIps)
   #default_app_open(fn%idx);idx+=1
+  if args.mode&1:
+    testInvoice(fn%idx)
+    default_app_open(fn%idx);idx+=1
 
-  testInvoice(fn%idx)
-  default_app_open(fn%idx);idx+=1
-
-  #testTherapyProgress(fn%idx)
-  #default_app_open(fn%idx);idx+=1
+  if args.mode&2:
+    testTherapyProgress(fn%idx)
+    default_app_open(fn%idx);idx+=1
 
 
 

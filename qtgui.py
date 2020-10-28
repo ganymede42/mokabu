@@ -152,7 +152,7 @@ class WndClient(qtw.QWidget):
 
     app=qtw.QApplication.instance()
     self.dbc=dbc=app.mkb.db.cursor()
-    itemsNaVo=dbc.execute('SELECT pkPerson, Nachname||" "||Vorname FROM tblPerson').fetchall()
+    itemsNaVo=dbc.execute('SELECT id, lstName||" "||fstName FROM Person').fetchall()
 
     #items=["Java","C#","Python"]
     cb.setEditable(True)
@@ -175,10 +175,9 @@ class WndClient(qtw.QWidget):
     loF.addRow('Suche',cb)
     self.fldLst=fldLst=list()
 
-    for desc in ('pkPerson','RngAnrede','RngNachname','RngVorname','RngAdresse',
-                'RngAdresse1','RngAdresse2','PLZ','Ort','Nachname',
-                'Vorname','Tel','Tel1','Tel2','datGeb','eMail','eMail1','eMail2','AHVNr',
-                ('Bemerkung',qtw.QTextEdit) ):
+    for desc in ('id','ivcPrefix','ivcLstName','ivcFstName','ivcAddress','ivcAddress1','ivcAddress2','zipCode','city','lstName',
+                 'fstName','phone','phone1','phone2','dtBirth','eMail','eMail1','eMail2','ahvNr',
+                 ('comment',qtw.QTextEdit) ):
       if type(desc)==str:
         txt=desc;qWndType=qtw.QLineEdit
       else:
@@ -187,7 +186,7 @@ class WndClient(qtw.QWidget):
       fldLst.append(w)
       loF.addRow(txt,w)
 
-    for txt,func in (("Behandlungen",self.OnWndTreatment),("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress),("Save",self.OnSave)):
+    for txt,func in (("Treatment",self.OnWndTreatment),("Invoice",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress),("Save",self.OnSave)):
       btn=qtw.QPushButton(txt,self)
       if func is not None:
         btn.clicked.connect(func)
@@ -202,7 +201,7 @@ class WndClient(qtw.QWidget):
       cb.removeItem(i)
     else:
       dbc=self.dbc
-      d=dbc.execute('SELECT * FROM tblPerson WHERE pkPerson=%d'%curData).fetchone()
+      d=dbc.execute('SELECT * FROM Person WHERE id=%d'%curData).fetchone()
       #print(d)
       for w,d in zip(self.fldLst,d):
         if d is None:
@@ -215,7 +214,7 @@ class WndClient(qtw.QWidget):
     print('OnRptTreatmentProgress')
     app=qtw.QApplication.instance()
     curData=self.cbNaVo.currentData()
-    app.mkb.report_therapy_progress('pkPerson=%d'%curData)
+    app.mkb.report_therapy_progress('tr.id=%d'%curData)
 
   def OnWndTreatment(self):
     cb=self.cbNaVo
@@ -240,8 +239,6 @@ class WndClient(qtw.QWidget):
     sub.show()
 
   def OnSave(self):
-    #d=dbc.execute('SELECT * FROM tblPerson WHERE pkPerson=%d'%curData).fetchone()
-    #print(d)
     sqlFld=list()
     sqlUpd=list()
     sqlWhere=list()
@@ -253,14 +250,14 @@ class WndClient(qtw.QWidget):
       except AttributeError:
         val=w.toPlainText()
       if val=='':val=None
-      if fld=='pkPerson':
+      if fld=='id':
         sqlWhere=' WHERE '+fld+'=?'
         valWhere=val
       else:
         sqlFld.append(fld+'=?')
         sqlUpd.append(val)
     sqlUpd.append(valWhere)
-    sqlStr='UPDATE tblPerson SET '+ ','.join(sqlFld) +sqlWhere
+    sqlStr='UPDATE Person SET '+ ','.join(sqlFld) +sqlWhere
 
     print(sqlStr,sqlUpd)
     app=qtw.QApplication.instance()
@@ -289,9 +286,9 @@ class WndTreatment(qtw.QWidget):
 
     app=qtw.QApplication.instance()
     self.dbc=dbc=app.mkb.db.cursor()
-    sqlQry='SELECT pkBehandlung, datBehandlung FROM tblBehandlung'
+    sqlQry='SELECT id, dtTreatment FROM Treatment'
     if sqlFilter is not None: sqlQry+=' '+sqlFilter
-    sqlQry+=' ORDER BY fkPerson,datBehandlung'
+    sqlQry+=' ORDER BY fkPerson,dtTreatment'
     itemsTrt=dbc.execute(sqlQry).fetchall()
 
     cb.setEditable(True)
@@ -307,17 +304,17 @@ class WndTreatment(qtw.QWidget):
     loF.addRow('Suche',cb)
     self.fldLst=fldLst=list()
 
-    for txt in ('pkBehandlung','fkRechnung','fkPerson','datBehandlung','Dauer','Stundenansatz','Bemerkung','TarZif'):
+    for txt in ('id','fkInvoice','fkPerson','dtTreatment','duration','costPerHour','comment','tarZif'):
       w=qtw.QLineEdit();w.setWindowTitle(txt)
       fldLst.append(w)
       loF.addRow(txt,w)
 
-    txt='AktenEintrag'
+    txt='document'
     w=qtw.QTextEdit();w.setWindowTitle(txt)
     fldLst.append(w)
     loF.addRow(txt,w)
 
-    for txt,func in (("Behandlungen",self.OnWndTreatment),):#("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
+    for txt,func in (("Treatments",self.OnWndTreatment),):#("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
       btn=qtw.QPushButton(txt,self)
       if func is not None:
         btn.clicked.connect(func)
@@ -333,7 +330,7 @@ class WndTreatment(qtw.QWidget):
       cb.removeItem(i)
     else:
       dbc=self.dbc
-      d=dbc.execute('SELECT * FROM tblBehandlung WHERE pkBehandlung=%d'%curData).fetchone()
+      d=dbc.execute('SELECT * FROM Treatment WHERE id=%d'%curData).fetchone()
       #print(d)
       for w,d in zip(self.fldLst,d):
         if d is None:
@@ -369,9 +366,9 @@ class WndInvoice(qtw.QWidget):
 
     app=qtw.QApplication.instance()
     self.dbc=dbc=app.mkb.db.cursor()
-    sqlQry='SELECT pkRechnung, datRechnung FROM tblRechnung'
+    sqlQry='SELECT id, dtInvoice FROM Invoice'
     if sqlFilter is not None: sqlQry+=' '+sqlFilter
-    sqlQry+=' ORDER BY fkPerson,datRechnung'
+    sqlQry+=' ORDER BY fkPerson,dtInvoice'
 
     itemsRng=dbc.execute(sqlQry).fetchall()
     cb.setEditable(True)
@@ -390,14 +387,14 @@ class WndInvoice(qtw.QWidget):
     loF.addRow('Suche',cb)
     self.fldLst=fldLst=list()
 
-    for txt in ('pkRechnung','fkPerson','tplInvoice','datRechnung','datGedruckt','datBezahlt'):
+    for txt in ('id','fkPerson','tplInvoice','dtInvoice'):
       w=qtw.QLineEdit()
       fldLst.append(w)
       loF.addRow(txt,w)
 
     w=qtw.QTextEdit()
     fldLst.append(w)
-    loF.addRow('Bemerkung',w)
+    loF.addRow('comment',w)
 
     #Adding sql table for treatments
     self.mdl=mdl = qtdb.QSqlTableModel()
@@ -412,7 +409,7 @@ class WndInvoice(qtw.QWidget):
     vh.setDefaultSectionSize(22)
     #vh.setCascadingSectionResizes(True)
     vh.setMinimumSectionSize(16)
-    loF.addRow('Behandlungen',view)
+    loF.addRow('Treatments',view)
 
     #for txt,func in (("Behandlungen",self.OnWndTreatment),("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress),("Save",self.OnSave)):
     for txt,func in (("Report Invoice",self.OnRptInvoice),("Save",self.OnSave)):
@@ -430,7 +427,7 @@ class WndInvoice(qtw.QWidget):
       cb.removeItem(i)
     else:
       dbc=self.dbc
-      d=dbc.execute('SELECT * FROM tblRechnung WHERE pkRechnung=%d'%curData).fetchone()
+      d=dbc.execute('SELECT * FROM Invoice WHERE id=%d'%curData).fetchone()
       #print(d)
       for w,d in zip(self.fldLst,d):
         if d is None:
@@ -439,7 +436,7 @@ class WndInvoice(qtw.QWidget):
           d=str(d)
         w.setText(d)
     mdl=self.mdl
-    qry=qtdb.QSqlQuery('SELECT pkBehandlung,fkRechnung,fkPerson,datBehandlung,Dauer,Stundenansatz,Bemerkung,TarZif FROM tblBehandlung WHERE fkRechnung=%d'%curData)
+    qry=qtdb.QSqlQuery('SELECT id,fkInvoice,fkPerson,dtTreatment,duration,costPerHour,comment,tarZif FROM Treatment WHERE fkInvoice=%d'%curData)
     mdl.setQuery(qry)
 
 
@@ -447,7 +444,7 @@ class WndInvoice(qtw.QWidget):
     print('OnRptInvoice')
     app=qtw.QApplication.instance()
     curData=self.cbRng.currentData()
-    app.mkb.report_invoice('pkRechnung=%d'%curData)
+    app.mkb.report_invoice('iv.id=%d'%curData)
 
   def OnSave(self):
     #d=dbc.execute('SELECT * FROM tblPerson WHERE pkPerson=%d'%curData).fetchone()
@@ -502,7 +499,7 @@ class WndMain(qtw.QMainWindow):
 
   def OnTblClients(self):
     print("OnTblClients")
-    wnd=WndSqlTblView('TblClients:','tblPerson')
+    wnd=WndSqlTblView('TblClients:','Person')
     #wnd=WndSqlTblView('TblClients:','SELECT * FROM tblPerson')
     #wnd=WndSqlTblView('TblClients:',
     #                  'SELECT RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,PLZ,Ort FROM tblPerson ORDER BY RngNachname,RngVorname',
@@ -514,14 +511,14 @@ class WndMain(qtw.QMainWindow):
 
   def OnTblTreatments(self):
     print("aOnTblTreatments")
-    wnd=WndSqlTblView('TblTreatments:','tblBehandlung',geometry=(100,100,1200,700))
+    wnd=WndSqlTblView('TblTreatments:','Treatment',geometry=(100,100,1200,700))
     for i in range(wnd.mdl.columnCount()):
       wnd.tbl.resizeColumnToContents(i)
     WndChildAdd(wnd)
 
   def OnTblInvoices(self):
     print("OnTblInvoices")
-    wnd=WndSqlTblView('TblInvoices:','tblRechnung',geometry=(100,100,600,700))
+    wnd=WndSqlTblView('TblInvoices:','Invoice',geometry=(100,100,600,700))
     for i in range(wnd.mdl.columnCount()):
       wnd.tbl.resizeColumnToContents(i)
     WndChildAdd(wnd)

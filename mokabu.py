@@ -21,9 +21,12 @@ class MoKaBu:
         #One way of permanently turning on foreign_keys by default is to inject the following line into ~/.sqliterc: PRAGMA foreign_keys = ON;
         dbc.execute("PRAGMA foreign_keys = 1")
         #dbc.execute("PRAGMA foreign_keys")
-        for sql in('SELECT COUNT(*) FROM tblPerson',
-                   'SELECT COUNT(*) FROM tblBehandlung',
-                   'SELECT COUNT(*) FROM tblRechnung'):
+        for sql in('SELECT COUNT(*) FROM Person',
+                   'SELECT COUNT(*) FROM Treatment',
+                   'SELECT COUNT(*) FROM Invoice',
+                   'SELECT COUNT(*) FROM Account',
+                   'SELECT COUNT(*) FROM EventLog',
+                   'SELECT COUNT(*) FROM EventType'):
           print(sql+' -> ',end='')
           for row in dbc.execute(sql):
             print(row)
@@ -51,19 +54,18 @@ class MoKaBu:
     db=self.db
     dbcRng=self.dbc
     dbcBeh=db.cursor()
-    sqlTplRng='''SELECT tr.pkRechnung,tr.tplInvoice,tr.datRechnung,RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,RngAdresse2,PLZ,Ort,Nachname,Vorname,datGeb,AHVNr
-    FROM tblRechnung tr LEFT JOIN tblPerson tp on tr.fkPerson=tp.pkPerson'''
-    sqlTplOrd='ORDER BY tr.pkRechnung'''
+    sqlTplRng='''SELECT iv.id,tplInvoice,dtInvoice,ivcPrefix,ivcLstName,ivcFstName,ivcAddress,ivcAddress1,ivcAddress2,zipCode,city,lstName,fstName,dtBirth,ahvNr
+    FROM Invoice iv LEFT JOIN Person ps on iv.fkPerson=ps.id'''
+    sqlTplOrd='ORDER BY iv.id'''
 
     if sqlFilt is None:
       sqlRng=sqlTplRng+' '+sqlTplOrd
     else:
       sqlRng=sqlTplRng+' WHERE '+sqlFilt+' '+sqlTplOrd
 
-    sqlTplBeh='''SELECT datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif FROM tblBehandlung tb
-    WHERE tb.fkRechnung=%s
-    ORDER BY tb.datBehandlung'''
-
+    sqlTplBeh='''SELECT dtTreatment,costPerHour,duration,comment,tarZif FROM Treatment tr
+    WHERE tr.fkInvoice=%s
+    ORDER BY tr.dtTreatment'''
     repIvc=report.Invoice(fn)
 
     for recRng in dbcRng.execute(sqlRng):
@@ -81,8 +83,9 @@ class MoKaBu:
     db=self.db
     dbcRng=self.dbc
     dbcBeh=db.cursor()
-    sqlTplBeh='SELECT fkPerson,Nachname,Vorname,datGeb,Tel,eMail,datBehandlung,tb.Bemerkung,AktenEintrag FROM tblBehandlung tb LEFT JOIN tblPerson tp ON tb.fkPerson=tp.pkPerson'
-    sqlTplOrd='ORDER BY fkPerson,tb.datBehandlung'''
+
+    sqlTplBeh='SELECT fkPerson,lstName,fstName,dtBirth,phone,eMail,dtTreatment,tr.comment,document FROM Treatment tr LEFT JOIN Person ps ON tr.fkPerson=ps.id'
+    sqlTplOrd='ORDER BY fkPerson,tr.dtTreatment'''
 
     if sqlFilt is None:
       sqlBeh=sqlTplBeh+' '+sqlTplOrd
@@ -106,12 +109,19 @@ class MoKaBu:
 
 if __name__=='__main__':
 
+  import argparse
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-m', '--mode', type=int, help='mode bits', default=0x0)
+  args = parser.parse_args()
+  print(args)
   mkb=MoKaBu('mokabu.db')
   #mkb.open()
   #mkb.reset()
   #mkb.populate()
-  #mkb.report_invoice();exit(0)
-  #mkb.report_therapy_progress();exit(0)
+  if args.mode&1:
+    mkb.report_invoice();exit(0)
+  if args.mode&2:
+    mkb.report_therapy_progress();exit(0)
 
   import qtgui
   qtgui.MainApp(mkb)

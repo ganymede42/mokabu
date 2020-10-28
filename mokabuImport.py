@@ -49,16 +49,17 @@ def insert_verlauf(rec,dateStr,title,eintrag,fh):
     except UserWarning as e:
       print('insert_verlauf(1)'+fh.name+':error in dateconvert:"%s"'%str(dateStr),file=sys.stderr)
       date=0
-    while date in rec:
-      print('insert_verlauf(1): warning dupkicate key:',fh.name,dateStr,date,file=sys.stderr)
-      date+='.'
+    t=1;dt=date
+    while dt in rec:
+      print('insert_verlauf(1): warning dupkicate key:',fh.name,dateStr,dt,file=sys.stderr)
+      dt=date + ' 00:%.2d'%t;t+=1
 
     eintrag='\n'.join(eintrag)
     eintrag=eintrag.strip()
     #eintrag.replace('\n','<br/>\n')
     title=title.strip()
 
-    rec[date]=(title,eintrag)
+    rec[dt]=(title,eintrag)
 
 class ImportData:
 
@@ -464,16 +465,16 @@ class ImportData:
     dbBeh=self.dbBeh
 
     fh=open(fnSql,'w')
-    #fh.write('INSERT INTO tblPerson (IDPerson,Anrede,Nachname,Vorname,Adresse,PLZ,Ort,Mobile,Telefon,eMail,Bemerkung) VALUES')
-    fh.write('INSERT INTO tblPerson (pkPerson,RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,RngAdresse2,PLZ,Ort,Nachname,Vorname,datGeb,AHVNr) VALUES\n')
+
+    fh.write('INSERT INTO Person (id,ivcAnrede,ivcLstName,ivcFstName,ivcAddress,ivcAddress1,ivcAddress2,zipCode,city,lstName,fstName,dtBirth,ahvNr) VALUES\n')
     fh.write('('+'),\n('.join((map(lambda rec:','.join(map(lambda s:'NULL' if s is None else repr(s),rec)),dbKlient)))+');\n\n\n')
     #fh.write(',\n'.join(map(str,dbKlient)))
 
-    fh.write('INSERT INTO tblRechnung (pkRechnung,fkPerson,datRechnung) VALUES\n')
+    fh.write('INSERT INTO Invoice (id,fkPerson,dtInvoice) VALUES\n')
     fh.write('('+'),\n('.join((map(lambda rec:','.join(map(lambda s:'NULL' if s is None else repr(s),rec)),dbRch)))+');\n\n\n')
     #fh.write(',\n'.join(map(str,dbRch)))
 
-    fh.write('INSERT INTO tblBehandlung (pkBehandlung,fkRechnung,fkPerson,datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif,AktenEintrag) VALUES\n')
+    fh.write('INSERT INTO Treatment (id,fkInvoice,fkPerson,dtTreatment,costPerHour,duration,comment,tarZif,document) VALUES\n')
     fh.write('('+'),\n('.join((map(lambda rec:','.join(map(lambda s:'NULL' if s is None else repr(s),rec)),dbBeh)))+');\n\n\n')
     fh.close()
     print('write_sql file %s done.'%fnSql)
@@ -503,20 +504,20 @@ class ImportData:
 
     try:
       dbc.executemany(
-        'INSERT INTO tblPerson (pkPerson,RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,RngAdresse2,PLZ,Ort,Nachname,Vorname,datGeb,AHVNr) VALUES\n'\
+        'INSERT INTO Person (id,ivcPrefix,ivcLstName,ivcFstName,ivcAddress,ivcAddress1,ivcAddress2,zipCode,city,lstName,fstName,dtBirth,ahvNr) VALUES\n'\
         '(?,?,?,?,?,?,?,?,?,?,?,?,?)',dbKlient)
 
       dbc.executemany(
-        'INSERT INTO tblRechnung (pkRechnung,fkPerson,datRechnung) VALUES\n'\
+        'INSERT INTO Invoice (id,fkPerson,dtInvoice) VALUES\n'\
         '(?,?,?)',dbRch)
 
       dbc.executemany(
-        'INSERT INTO tblBehandlung (pkBehandlung,fkRechnung,fkPerson,datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif,AktenEintrag) VALUES\n'\
+        'INSERT INTO Treatment (id,fkInvoice,fkPerson,dtTreatment,costPerHour,duration,comment,tarZif,document) VALUES\n'\
         '(?,?,?,?,?,?,?,?,?)',dbBeh)
 
-      for sql in ('SELECT COUNT(*) FROM tblPerson',
-                  'SELECT COUNT(*) FROM tblBehandlung',
-                  'SELECT COUNT(*) FROM tblRechnung'):
+      for sql in ('SELECT COUNT(*) FROM Person',
+                  'SELECT COUNT(*) FROM Invoice',
+                  'SELECT COUNT(*) FROM Treatment'):
         print(sql+' -> ',end='')
         for row in dbc.execute(sql):
           print(row)

@@ -1,74 +1,149 @@
+-- NAMING CONVENTIONS:
+-- <TableName>                table starts with upper case and is camel case
+-- <fieldName>                field name starts with lower case and is camel case
+-- <id>                       primary key field is 'id'
+-- fk<TableName>              foreign key field is 'fk<TableName>' and reffers to field id of table <TableName>
+-- Cpk<TableName>             primary key constraint
+-- Cfk<TableName>_<fieldName> foreign key constraint
+-- Idx<TableName>             index on primary key
+-- Idx<TableName>_<fieldName> index on a field (mostly foreign key)
+
+-- CONSTRAINT Cpk<TblName> PRIMARY KEY (id),
+-- CONSTRAINT Cfk<TblName>_fk<TblRef> FOREIGN KEY (fk<TblRef>) REFERENCES <TblRef>(id)
+-- CREATE UNIQUE INDEX Idx<TblName> ON <TblName>(id);
+-- CREATE INDEX Idx<TblName>_fk<TblRef> ON <TblName> (fk<TblRef>);
+
+--- condendes fileld list:
+--- Person:
+---   id,ivcPrefix,ivcLstName,ivcFstName,ivcAddress,ivcAddress1,ivcAddress2,zipCode,city,lstName,
+---   fstName,phone,phone1,phone2,dtBirth,eMail,eMail1,eMail2,ahvNr,comment,
+--- Invoice:
+---   id,fkPerson,tplInvoice,dtInvoice,comment,
+--- Treatment:
+---    id,fkInvoice,fkPerson,dtTreatment,duration,costPerHour,comment,tarZif,document,
+
+
 PRAGMA foreign_keys = 0;
-DROP TABLE IF EXISTS tblBehandlung;
-DROP TABLE  IF EXISTS tblRechnung;
-DROP TABLE  IF EXISTS tblPerson;
+DROP TABLE  IF EXISTS Person;
+DROP TABLE IF EXISTS Treatment;
+DROP TABLE  IF EXISTS Invoice;
+DROP TABLE  IF EXISTS Account;
+DROP TABLE  IF EXISTS EventLog;
+DROP TABLE  IF EXISTS EventType;
+
 PRAGMA foreign_keys = 1;
 
--- tblPerson definition
 
-CREATE TABLE tblPerson (
-	pkPerson INTEGER NOT NULL,
-	RngAnrede TEXT,
-	RngNachname TEXT,
-	RngVorname TEXT,
-	RngAdresse TEXT,
-	RngAdresse1 TEXT,
-	RngAdresse2 TEXT,
-	PLZ INTEGER DEFAULT 0,
-	Ort TEXT,
-	Nachname TEXT,
-	Vorname TEXT,
-	Tel TEXT,
-	Tel1 TEXT,
-	Tel2 TEXT,
-	datGeb TEXT,
+-- TABLE Person definition
+
+CREATE TABLE Person (
+	id INTEGER NOT NULL,
+	ivcPrefix TEXT,
+	ivcLstName TEXT,
+	ivcFstName TEXT,
+	ivcAddress TEXT,
+	ivcAddress1 TEXT,
+	ivcAddress2 TEXT,
+	zipCode INTEGER DEFAULT 0,
+	city TEXT,
+	lstName TEXT,
+	fstName TEXT,
+	phone TEXT,
+	phone1 TEXT,
+	phone2 TEXT,
+	dtBirth TEXT,
 	eMail TEXT,
 	eMail1 TEXT,
 	eMail2 TEXT,
-	AHVNr TEXT,
-	Bemerkung TEXT,
-	CONSTRAINT PKtblPerson PRIMARY KEY (pkPerson)
+	ahvNr TEXT,
+	comment TEXT,
+	CONSTRAINT CpkPerson PRIMARY KEY (id)
 );
+CREATE UNIQUE INDEX IdxPerson ON Person (id);
 
-CREATE UNIQUE INDEX IDXtblPerson ON tblPerson (pkPerson);
 
+-- TABLE Invoice definition
 
--- tblRechnung definition
-
-CREATE TABLE tblRechnung (
-	pkRechnung INTEGER NOT NULL,
+CREATE TABLE Invoice (
+	id INTEGER NOT NULL,
 	fkPerson INTEGER,
 	tplInvoice INTEGER, --invoice template
-	datRechnung TEXT,
-	datGedruckt TEXT,
-	datBezahlt TEXT,
-	Bemerkung TEXT,
-	CONSTRAINT PKtblRechnung PRIMARY KEY (pkRechnung),
-	CONSTRAINT FKtblPersonfkPerson FOREIGN KEY (fkPerson) REFERENCES tblPerson(pkPerson)
+	dtInvoice DATETIME,
+	comment TEXT,
+	CONSTRAINT CpkInvoice PRIMARY KEY (id),
+	CONSTRAINT CfkInvoice_fkPerson FOREIGN KEY (fkPerson) REFERENCES Person(id)
 );
-CREATE UNIQUE INDEX IDXtblRechnung ON tblRechnung (pkRechnung);
-CREATE INDEX IDXtblRechnungfkPerson ON tblRechnung (fkPerson);
+CREATE UNIQUE INDEX IdxInvoice ON Invoice (id);
+CREATE INDEX IdxInvoice_fkPerson ON Invoice (fkPerson);
 
 
--- tblBehandlung definition
+-- TABLE Account definition
 
-CREATE TABLE tblBehandlung (
-	pkBehandlung INTEGER NOT NULL,
-	fkRechnung INTEGER,
+CREATE TABLE Account (
+	id INTEGER NOT NULL,
+	fkInvoice INTEGER,
+	dtPayment DATETIME,
+	amount NUMERIC,
+	reference TEXT,
+	comment TEXT,
+	CONSTRAINT CpkAccount PRIMARY KEY (id),
+	CONSTRAINT CfkAccount_fkInvoice FOREIGN KEY (fkInvoice) REFERENCES Invoice(id)
+);
+CREATE UNIQUE INDEX IdxAccount ON Account (id);
+CREATE INDEX IdxAccount_fkInvoice ON Account (fkInvoice);
+
+
+-- TABLE Treatment definition
+
+CREATE TABLE Treatment (
+	id INTEGER NOT NULL,
+	fkInvoice INTEGER,
 	fkPerson INTEGER,
-	datBehandlung TEXT,
-	Dauer INTEGER DEFAULT 60,
-	Stundenansatz NUMERIC DEFAULT 180,
-	Bemerkung TEXT,
-	TarZif TEXT,
-	AktenEintrag TEXT,
-	CONSTRAINT PKtblBehandlung PRIMARY KEY (pkBehandlung),
-	CONSTRAINT FKtblBehandlungfkRechnung FOREIGN KEY (fkRechnung) REFERENCES tblRechnung(pkRechnung)
-	CONSTRAINT FKtblBehandlungfkPerson FOREIGN KEY (fkPerson) REFERENCES tblPerson(pkPerson)
+	dtTreatment TEXT,
+	duration INTEGER DEFAULT 60,
+	costPerHour NUMERIC DEFAULT 180,
+	comment TEXT,
+	tarZif TEXT,
+	document TEXT,
+	CONSTRAINT CpkTreatment PRIMARY KEY (id),
+	CONSTRAINT CfkTreatment_fkInvoice FOREIGN KEY (fkInvoice) REFERENCES Invoice(id)
+	CONSTRAINT CfkTreatment_fkPerson FOREIGN KEY (fkPerson) REFERENCES Person(id)
 );
+CREATE UNIQUE INDEX IdxTreatment ON Treatment (id);
+CREATE INDEX IdxTreatment_fkInvoice ON Treatment (fkInvoice);
+CREATE INDEX IdxTreatment_fkPerson ON Treatment (fkPerson);
 
-CREATE UNIQUE INDEX IDXtblBehandlung ON tblBehandlung (pkBehandlung);
-CREATE INDEX IDXtblBehandlungfkRechnung ON tblBehandlung (fkRechnung);
-CREATE INDEX IDXtblBehandlungfkPerson ON tblBehandlung (fkPerson);
+
+-- TABLE EventLog definition
+
+CREATE TABLE EventLog (
+	id INTEGER NOT NULL,
+	dtEvt DATETIME,
+	fkEventType INTEGER,
+	fkObj INTEGER,
+	comment TEXT,
+	CONSTRAINT CpkEventLog PRIMARY KEY (id),
+	CONSTRAINT CfkEventLog_fkEventType FOREIGN KEY (fkEventType) REFERENCES EventType(id)
+);
+CREATE UNIQUE INDEX IdxEventLog ON EventLog (id);
+CREATE INDEX IdxEventLog_fkEventType ON EventLog (fkEventType);
+
+
+-- TABLE EventType definition
+
+CREATE TABLE EventType (
+	id INTEGER NOT NULL,
+	tblName TEXT,
+	comment TEXT,
+	CONSTRAINT CpkEventType PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX IdxEventType ON EventType(id);
+
+INSERT INTO EventType (id,tblName,comment) VALUES
+(100,'Invoice','Rechnung erstellt'),
+(101,'Invoice','Rechnung bezahlt'),
+(102,'Invoice','1. Mahnung erstellt'),
+(103,'Invoice','2. Mahnung erstellt');
+
 
 VACUUM;

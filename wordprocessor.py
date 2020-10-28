@@ -310,7 +310,7 @@ class MainWindow(QMainWindow):
   def file_open(self):
     app=qtw.QApplication.instance()
     self.dbc=dbc=app.mkb.db.cursor()
-    itemsNaVo=dbc.execute('SELECT AktenEintrag FROM tblBehandlung tb WHERE tb.pkBehandlung=3').fetchone()
+    itemsNaVo=dbc.execute('SELECT document FROM Treatment tb WHERE tb.pkBehandlung=3').fetchone()
 
     path, _ = QFileDialog.getOpenFileName(self, "Open file", "", "HTML documents (*.html);Text documents (*.txt);All files (*.*)")
 
@@ -374,9 +374,9 @@ class MainWindow(QMainWindow):
     mkb=app.mkb
     self.pkBehandlung=pkBehandlung
 
-    txt=mkb.dbc.execute('SELECT Nachname,Vorname,datBehandlung,AktenEintrag FROM tblBehandlung tb '
-                        'LEFT JOIN tblPerson tp ON tb.fkPerson=tp.pkPerson '
-                        'WHERE pkBehandlung=?',(pkBehandlung,)).fetchone()
+    txt=mkb.dbc.execute('SELECT lstName,fstName,dtTreatment,document FROM Treatment tr '
+                        'LEFT JOIN Person ps ON tr.fkPerson=ps.id '
+                        'WHERE tr.id=?',(pkBehandlung,)).fetchone()
     if txt is not None:
       print(txt[0])
       self.editor.setText(txt[3])
@@ -387,7 +387,7 @@ class MainWindow(QMainWindow):
     mkb=app.mkb
     dbc=mkb.dbc
     txt = self.editor.toPlainText()
-    mkb.dbc.execute('UPDATE tblBehandlung SET AktenEintrag=? WHERE pkBehandlung=?',(txt,self.pkBehandlung))
+    mkb.dbc.execute('UPDATE Treatment SET document=? WHERE id=?',(txt,self.pkBehandlung))
     mkb.db.commit()
 
   def record_save_html(self):
@@ -427,7 +427,7 @@ class MainWindow(QMainWindow):
     #remove all remaning style attributes -> but this loses all spacing of the paragraphs...
     #txt=re.sub('\s*style=".*?"','',txt)
     #print(txt)
-    mkb.dbc.execute('UPDATE tblBehandlung SET AktenEintrag=? WHERE pkBehandlung=?',(txt,self.pkBehandlung))
+    mkb.dbc.execute('UPDATE Treatment SET document=? WHERE id=?',(txt,self.pkBehandlung))
     mkb.db.commit()
 
 if __name__ == '__main__':
