@@ -13,7 +13,6 @@ import reportlab.pdfgen as rlpg
 import reportlab.pdfbase as rlpb
 import reportlab.pdfbase.ttfonts #else not visible
 
-
 def default_app_open(file):
   if platform.system() == 'Darwin':       # macOS
     spc.call(('open', file))
@@ -40,7 +39,24 @@ class Invoice():
     styles.add(rls.ParagraphStyle(name='Right', alignment=rle.TA_RIGHT))
     styles.add(rls.ParagraphStyle(name='Center', alignment=rle.TA_CENTER))
 
-  def add(self,klient,datRng,behandlungen):
+  def add(self,klient,tplID,datRng,behandlungen):
+    #Vorlagen:
+    #Mahnungen nicht IV
+    #/media/zamofing_t/DataHD/Praxis/KlientenMerge/all/Viehweg Lina/Rechnung_20200717.docx
+    #/media/zamofing_t/DataHD/Praxis/KlientenMerge/all/Viehweg Lina/Zahlungserinnerung_Rechnung_20200717.docx
+    #/media/zamofing_t/DataHD/Praxis/KlientenMerge/all/Viehweg Lina/zweite Mahnung_Rechnung_20200717.docx
+    #/media/zamofing_t/DataHD/Praxis/KlientenMerge/all/Osei Lawrence/Rechnung mit Tarifziffern_20200924.docx
+    #tplID&0x3:    2 Bit
+    # 0: Normal
+    # 1: 1. Mahnung
+    # 2: 2. Mahnung
+    #(tplID>>2)&0x1:
+    # 0: Normal
+    # 1: IV mit Tarifziffer
+    if tplID==None:tplID=0
+    tplIV=(tplID>>2)&0x1
+    tplMahnung=tplID&0x3
+
     canvas=self.canvas
     styles=self.styles
     styN=styles['Normal']
@@ -82,39 +98,78 @@ class Invoice():
     story.append(rlp.Spacer(1,36))
     story.append(rlp.Paragraph(txt,styN))
     txt='Zürich, %s'%dateconvert(datRng)
-    story.append(rlp.Spacer(1,36))
+    story.append(rlp.Spacer(1,24))
     story.append(rlp.Paragraph(txt,styN))
-    story.append(rlp.Spacer(1,36))
-    txt='Rechnung für<br/><br/><b>%s %s'%(klient[8:10])
+    story.append(rlp.Spacer(1,12))
+
+    if tplMahnung==1:
+      txt='<b>Zahlungserinnerung</b><br/>Es dürfte Ihrer Aufmerksamkeit entgangen sein, dass die nachstehend aufgeführten Rechnungsposten noch offen sind. Ich bitte Sie, die fälligen Rechnungsbeträge innert 10 Tagen einzuzahlen und danke Ihnen für die fristgerechte Überweisung. Sollte sich Ihre Zahlung mit diesem Schreiben gekreuzt haben, betrachten Sie es bitte als gegenstandslos.'
+    elif tplMahnung==2:
+      txt='<b>2. Mahnung</b><br/>Den unten stehenden Rechnungsposten haben Sie trotz Zahlungserinnerung nicht bezahlt. Sie ersparen sich Unannehmlichkeiten und weitere Kosten, wenn Sie den fälligen Betrag innert 15 Tagen überweisen. Sollte sich Ihre Zahlung mit diesem Schreiben gekreuzt haben, betrachten Sie es bitte als gegenstandslos.'
+    else:
+      txt='<b>Rechnung für</b>'
+
+    txt+='<br/><br/><b>%s %s'%(klient[8:10])
+
+
+    if tplIV:
+      txt+=', <Ort>'
     if klient[10] is not None: txt+=', geb: %s'%dateconvert(klient[10])
     if klient[11]  is not None: txt+=' AHV-Nr: %s'%klient[11]
     txt+='</b>'
-    story.append(rlp.Paragraph(txt,styN))
+    story.append(rlp.Paragraph(txt,styJ))
 
     story.append(rlp.Spacer(1,12))
-    data=[('Datum','Stundenansatz','Minuten','Bemerkung','TarifZif','Total',)]
-    totSum=0.
-    for datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif in behandlungen:
-      tot=Stundenansatz*Dauer/60
-      totSum+=tot
-      #pBemerkung=
-      if Bemerkung:
-        pBemerkung=rlp.Paragraph('<font size="8">'+Bemerkung+'</font>',styN)
-      else:
-        pBemerkung=''
-      data.append((dateconvert(datBehandlung),'%.2f'%Stundenansatz,'%d Min'%Dauer,pBemerkung,TarZif,'%.2f'%tot))
-    #pTotSum='%.2f'%totSum
-    pTotSum=rlp.Paragraph('<b>%.2f</b>'%totSum,styR)
-    data.append(('','','','','',pTotSum))
 
-    t=rlp.Table(data,colWidths=(60,80,60,130,50,60,))
-    t.hAlign='LEFT'
-    t.setStyle(rlp.TableStyle([#('INNERGRID',(0,0),(-1,-1),0.25,rll.colors.black),
-                               #('BOX',(0,0),(-1,-1),0.25,rll.colors.black),
-                               ('ALIGN',(0,0),(0,0),'CENTER'),
-                               ('ALIGN',(1,0),(2,-1),'RIGHT'),
-                               ('ALIGN',(5,0),(5,-1),'RIGHT'),
-                               ('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black)]))
+    if tplIV:
+      data=[('Datum','Tarif','Tarifziffer','Inhalt',rlp.Paragraph('Anzahl a 15min',styR),'Kosten',)]
+      totSum=0.
+      for datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif in behandlungen:
+        tot=Stundenansatz*Dauer/60
+        totSum+=tot
+        #pBemerkung=
+        if Bemerkung:
+          pBemerkung=rlp.Paragraph('<font size="8">'+Bemerkung+'</font>',styN)
+        else:
+          pBemerkung=''
+        #data.append((dateconvert(datBehandlung),'%.2f'%Stundenansatz,'%d Min'%Dauer,pBemerkung,TarZif,'%.2f'%tot))
+        data.append((dateconvert(datBehandlung),TarZif.split('.')[0],TarZif, pBemerkung, '%g'%(Dauer/15),'%.2f'%tot))
+      #pTotSum='%.2f'%totSum
+      pTotSum=rlp.Paragraph('<b>%.2f</b>'%totSum,styR)
+      data.append(('','','','','',pTotSum))
+
+      t=rlp.Table(data,colWidths=(60,40,60,200,50,50,))
+      t.hAlign='LEFT'
+      t.setStyle(rlp.TableStyle([('INNERGRID',(0,0),(-1,-1),0.15,rll.colors.black),
+                                 ('BOX',(0,0),(-1,-1),0.15,rll.colors.black),
+                                 ('ALIGN',(0,0),(0,-1),'RIGHT'),
+                                 ('ALIGN',(1,0),(2,-1),'RIGHT'),
+                                 ('ALIGN',(4,0),(4,-1),'CENTER'),
+                                 ('ALIGN',(5,0),(5,-1),'RIGHT'),
+                                 ('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black)]))
+    else:
+      data=[('Datum','Stundenansatz','Minuten','Total',)]
+      totSum=0.
+      for datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif in behandlungen:
+        tot=Stundenansatz*Dauer/60
+        totSum+=tot
+        #pBemerkung=
+        if Bemerkung:
+          pBemerkung=rlp.Paragraph('<font size="8">'+Bemerkung+'</font>',styN)
+        else:
+          pBemerkung=''
+        data.append((dateconvert(datBehandlung),'%.2f'%Stundenansatz,'%d Min'%Dauer,'%.2f'%tot))
+      #pTotSum='%.2f'%totSum
+      pTotSum=rlp.Paragraph('<b>%.2f</b>'%totSum,styR)
+      data.append(('','','',pTotSum))
+
+      t=rlp.Table(data,colWidths=(60,80,60,50,))
+      t.hAlign='LEFT'
+      t.setStyle(rlp.TableStyle([#('INNERGRID',(0,0),(-1,-1),0.25,rll.colors.black),
+                                 #('BOX',(0,0),(-1,-1),0.25,rll.colors.black),
+                                 ('ALIGN',(0,0),(0,-1),'RIGHT'), #datum
+                                 ('ALIGN',(1,0),(-1,-1),'RIGHT'), #others
+                                 ('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black)]))
 
     story.append(t)
 
@@ -138,7 +193,9 @@ class Invoice():
     story.append(rlp.Spacer(1,12))
     txt='''Monika Kast Perry'''
     story.append(rlp.Paragraph(txt,styC))
+    story.append(rlp.Spacer(1,12))
     txt='PS: Es kann über die Zusatzversicherung Ihrer Krankenkasse abgerechnet werden.'
+    story.append(rlp.Paragraph(txt,styJ))
     frm.addFromList(story,canvas)
     canvas.showPage()
 
@@ -221,13 +278,13 @@ class TherapyProgress(rlp.SimpleDocTemplate):
     for therapy in therapyLst:
       self.addTherapyProgress(*therapy)
 
-  def addClient(self,nachname,vorname,datGeb,tel1,eMail):
+  def addClient(self,nachname,vorname,datGeb,tel,eMail):
     (story,styN,styJ,styR,styC)=self.defaultVars
     story.append(rlp.PageBreakIfNotEmpty())
     #story.append(rlp.DocAssign('hdr',"nachname+' '+vorname"))
-    if tel1 is None:tel1=''
+    if tel is None:tel=''
     if eMail is None: eMail=''
-    header='%s %s %s %s %s'%(nachname,vorname,dateconvert(datGeb),tel1,eMail)
+    header='%s %s %s %s %s'%(nachname,vorname,dateconvert(datGeb),tel,eMail)
     story.append(HeaderFooter(header))
     #story.append(rlp.Paragraph('<b>'+header+'</b>',styN))
     story.append(rlp.Spacer(1,18))
@@ -381,17 +438,34 @@ if __name__ == '__main__':
 
   def testInvoice(fn):
     lstKlient=\
-      (('Frau ', 'Saki', 'Karakurt', 'Meierwiesenstrasse 24', '', '', '8107', 'Buchs', 'Bayraktar', 'Aras', '2012-02-15', ''),
-       ('Familie', 'Preisig U. &', 'C.', 'Sihlaustr. 3', '', '', '8134', 'Adliswil', 'Radic Baumgartner', 'Ksenija', '1975-18-06', ''),)
+      (('Frau ', 'Saki', 'Karakurt', 'Meierwiesenstrasse 24', '', '', '8107', 'Buchs', 'Bayraktar', 'Aras', '2012-02-15', '765.234.433.454'),
+       ('Familie', 'Preisig U. &', 'C.', 'Sihlaustr. 3', '', '', '8134', 'Adliswil', 'Radic Baumgartner', 'Ksenija', '1975-06-18', None),)
+    lstTpl=\
+      (None,0,1,2,4)
     lstDatRng=\
       (('2020-03-17'),('2020-06-26'),)
     lstBeh=\
-        ((('2020-05-15', 142.0, 60.0, '', ''),('2020-05-22', 142.0, 60.0, '', ''),('2020-05-29', 142.0, 60.0, '', ''),('2020-06-03', 142.0, 60.0, '', ''),('2020-06-12', 142.0, 60.0, '', '')),
-         (('2020-06-19', 180.0, 60.0, '', ''),('2020-07-31', 180.0, 60.0, '', ''),('2020-07-31', 180.0, 60.0, '', ''),('2020-08-06', 180.0, 60.0, '', ''),('2020-06-19', 180.0, 60.0, '', ''),('2020-07-31', 180.0, 60.0, '', ''),('2020-07-31', 180.0, 60.0, '', ''),('2020-08-06', 180.0, 60.0, '', '')))
+        ((('2020-05-15', 142.0, 60.0, 'Bemerkung 1', '752.34'),
+          ('2020-05-22', 142.0, 60.0, 'Bemerkung 2', '752.35'),
+          ('2020-05-29', 142.0, 60.0, 'Bemerkung 3', '752.36'),
+          ('2020-06-03', 142.0, 60.0, 'Bemerkung 4', '752.37'),
+          ('2020-06-12', 142.0, 60.0, 'Bemerkung 5', '752.38')),
+         (('2020-06-19', 180.0, 60.0, 'Bemerkung 1', '752.34'),
+          ('2020-07-31', 180.0, 60.0, 'Bemerkung 2', '752.35'),
+          ('2020-07-31', 180.0, 60.0, 'Bemerkung 3', '752.36'),
+          ('2020-08-06', 180.0, 60.0, 'Bemerkung 4', '752.37'),
+          ('2020-06-19', 180.0, 60.0, 'Bemerkung 5', '752.38'),
+          ('2020-07-31', 180.0, 60.0, 'Bemerkung 6', '752.39'),
+          ('2020-07-31', 180.0, 60.0, 'Bemerkung 7', '753.34'),
+          ('2020-08-06', 180.0, 60.0, 'Bemerkung 8', '754.34')))
 
     rep=Invoice(fn)
-    for i in range(2):
-      rep.add(lstKlient[i],lstDatRng[i],lstBeh[i])
+    for i in range(len(lstKlient)):
+      rep.add(lstKlient[i],None,lstDatRng[i],lstBeh[i])
+    for i in range(len(lstTpl)):
+      rep.add(lstKlient[0],lstTpl[i],lstDatRng[0],lstBeh[0])
+
+
     rep.publish()
 
   def testTherapyProgress(fn):
@@ -419,11 +493,11 @@ if __name__ == '__main__':
   #playground(fn%idx,lorIps)
   #default_app_open(fn%idx);idx+=1
 
-  #testInvoice(fn%idx)
-  #default_app_open(fn%idx);idx+=1
-
-  testTherapyProgress(fn%idx)
+  testInvoice(fn%idx)
   default_app_open(fn%idx);idx+=1
+
+  #testTherapyProgress(fn%idx)
+  #default_app_open(fn%idx);idx+=1
 
 
 

@@ -18,10 +18,13 @@ CREATE TABLE tblPerson (
 	Ort TEXT,
 	Nachname TEXT,
 	Vorname TEXT,
+	Tel TEXT,
 	Tel1 TEXT,
 	Tel2 TEXT,
 	datGeb TEXT,
 	eMail TEXT,
+	eMail1 TEXT,
+	eMail2 TEXT,
 	AHVNr TEXT,
 	Bemerkung TEXT,
 	CONSTRAINT PKtblPerson PRIMARY KEY (pkPerson)
@@ -35,6 +38,7 @@ CREATE UNIQUE INDEX IDXtblPerson ON tblPerson (pkPerson);
 CREATE TABLE tblRechnung (
 	pkRechnung INTEGER NOT NULL,
 	fkPerson INTEGER,
+	tplInvoice INTEGER, --invoice template
 	datRechnung TEXT,
 	datGedruckt TEXT,
 	datBezahlt TEXT,

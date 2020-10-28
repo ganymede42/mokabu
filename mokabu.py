@@ -51,7 +51,7 @@ class MoKaBu:
     db=self.db
     dbcRng=self.dbc
     dbcBeh=db.cursor()
-    sqlTplRng='''SELECT tr.pkRechnung,tr.datRechnung,RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,RngAdresse2,PLZ,Ort,Nachname,Vorname,datGeb,AHVNr
+    sqlTplRng='''SELECT tr.pkRechnung,tr.tplInvoice,tr.datRechnung,RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,RngAdresse2,PLZ,Ort,Nachname,Vorname,datGeb,AHVNr
     FROM tblRechnung tr LEFT JOIN tblPerson tp on tr.fkPerson=tp.pkPerson'''
     sqlTplOrd='ORDER BY tr.pkRechnung'''
 
@@ -72,7 +72,7 @@ class MoKaBu:
       dbcBeh=dbcBeh.execute(sqlBeh)
       dBeh=dbcBeh.fetchall()
       print(dBeh)
-      repIvc.add(recRng[2:],recRng[1],dBeh)
+      repIvc.add(recRng[3:],recRng[1],recRng[2],dBeh)#  add(klient,tplID,datRng,behandlungen):
 
     repIvc.publish()
     report.default_app_open(fn);
@@ -81,7 +81,7 @@ class MoKaBu:
     db=self.db
     dbcRng=self.dbc
     dbcBeh=db.cursor()
-    sqlTplBeh='SELECT fkPerson,Nachname,Vorname,datGeb,Tel1,eMail,datBehandlung,tb.Bemerkung,AktenEintrag FROM tblBehandlung tb LEFT JOIN tblPerson tp ON tb.fkPerson=tp.pkPerson'
+    sqlTplBeh='SELECT fkPerson,Nachname,Vorname,datGeb,Tel,eMail,datBehandlung,tb.Bemerkung,AktenEintrag FROM tblBehandlung tb LEFT JOIN tblPerson tp ON tb.fkPerson=tp.pkPerson'
     sqlTplOrd='ORDER BY fkPerson,tb.datBehandlung'''
 
     if sqlFilt is None:

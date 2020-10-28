@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #https://www.tutorialspoint.com/pyqt/pyqt_hello_world.htm
-
+#https://github.com/tpgit/MDIImageViewer usefull sample application
 import sys
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtCore as qtc
@@ -49,11 +49,11 @@ def WndChildRemove(wnd):
 #QMainWindow has compares to a QWidgets by default dockerbars for toolbars statusbar and menuBar
 # #https://www.learnpyqt.com/courses/start/basic-widgets/
 # http://zetcode.com/gui/pyqt5/menustoolbars/
-def AddMenuAction(widget,parentMenu,txt,func):
-  actQuit=qtw.QAction(txt,widget)
-  actQuit.triggered.connect(func)
-  parentMenu.addAction(actQuit)
-  return actQuit
+def AddMenuAction(widget,parentMenu,txt,func,**kwargs):
+  act=qtw.QAction(txt,widget,**kwargs)
+  act.triggered.connect(func)
+  parentMenu.addAction(act)
+  return act
 
 
 def SqlWidget(txt,qWndType):
@@ -177,7 +177,7 @@ class WndClient(qtw.QWidget):
 
     for desc in ('pkPerson','RngAnrede','RngNachname','RngVorname','RngAdresse',
                 'RngAdresse1','RngAdresse2','PLZ','Ort','Nachname',
-                'Vorname','Tel1','Tel2','datGeb','eMail','AHVNr',
+                'Vorname','Tel','Tel1','Tel2','datGeb','eMail','eMail1','eMail2','AHVNr',
                 ('Bemerkung',qtw.QTextEdit) ):
       if type(desc)==str:
         txt=desc;qWndType=qtw.QLineEdit
@@ -242,10 +242,34 @@ class WndClient(qtw.QWidget):
   def OnSave(self):
     #d=dbc.execute('SELECT * FROM tblPerson WHERE pkPerson=%d'%curData).fetchone()
     #print(d)
+    sqlFld=list()
+    sqlUpd=list()
+    sqlWhere=list()
+    ''
     for w in self.fldLst:
       fld=w.windowTitle()
-      txt=w.text()
-      print('UPDATE %s with %s'%(fld,txt))
+      try:
+        val=w.text()
+      except AttributeError:
+        val=w.toPlainText()
+      if val=='':val=None
+      if fld=='pkPerson':
+        sqlWhere=' WHERE '+fld+'=?'
+        valWhere=val
+      else:
+        sqlFld.append(fld+'=?')
+        sqlUpd.append(val)
+    sqlUpd.append(valWhere)
+    sqlStr='UPDATE tblPerson SET '+ ','.join(sqlFld) +sqlWhere
+
+    print(sqlStr,sqlUpd)
+    app=qtw.QApplication.instance()
+    db=app.mkb.db
+    dbc=db.cursor()
+    dbc.execute(sqlStr,sqlUpd)
+    #db.execute(sqlStr,sqlUpd)
+    db.commit()
+
 
 class WndTreatment(qtw.QWidget):
   def __init__(self,sqlFilter=None,title='WndTreatment',geometry=(100,100,800,500)):
@@ -366,7 +390,7 @@ class WndInvoice(qtw.QWidget):
     loF.addRow('Suche',cb)
     self.fldLst=fldLst=list()
 
-    for txt in ('pkRechnung','fkPerson','datRechnung','datGedruckt','datBezahlt'):
+    for txt in ('pkRechnung','fkPerson','tplInvoice','datRechnung','datGedruckt','datBezahlt'):
       w=qtw.QLineEdit()
       fldLst.append(w)
       loF.addRow(txt,w)
@@ -452,10 +476,10 @@ class WndMain(qtw.QMainWindow):
 
     act=AddMenuAction(self,mnFile,"Quit",self.OnQuit)
     mnEdit=mainMenu.addMenu('&Edit')
-    act=AddMenuAction(self,mnEdit,"Table Clients",self.OnTblClients)
-    act=AddMenuAction(self,mnEdit,"Table Treatments",self.OnTblTreatments)
-    act=AddMenuAction(self,mnEdit,"Table Invoices",self.OnTblInvoices)
-    act=AddMenuAction(self,mnEdit,"Client",self.OnQryClient)
+    act=AddMenuAction(self,mnEdit,"Table Clients",self.OnTblClients,shortcut="Ctrl+Shift+A")
+    act=AddMenuAction(self,mnEdit,"Table Treatments",self.OnTblTreatments,shortcut="Ctrl+Shift+S")
+    act=AddMenuAction(self,mnEdit,"Table Invoices",self.OnTblInvoices,shortcut="Ctrl+Shift+D")
+    act=AddMenuAction(self,mnEdit,"Client",self.OnQryClient,shortcut="Ctrl+A")
     act=AddMenuAction(self,mnEdit,"Treatment",self.OnQryTreatment)
     act=AddMenuAction(self,mnEdit,"Invoice",self.OnQryInvoice)
     act=AddMenuAction(self,mnEdit,"New Invoice",self.OnQryNewInvoice)
