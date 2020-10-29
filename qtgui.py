@@ -387,7 +387,7 @@ class WndInvoice(qtw.QWidget):
     loF.addRow('Suche',cb)
     self.fldLst=fldLst=list()
 
-    for txt in ('id','fkPerson','tplInvoice','dtInvoice'):
+    for txt in ('id','fkPerson','fkAccount','tplInvoice','dtInvoice'):
       w=qtw.QLineEdit()
       fldLst.append(w)
       loF.addRow(txt,w)
@@ -476,6 +476,7 @@ class WndMain(qtw.QMainWindow):
     act=AddMenuAction(self,mnEdit,"Table Clients",self.OnTblClients,shortcut="Ctrl+Shift+A")
     act=AddMenuAction(self,mnEdit,"Table Treatments",self.OnTblTreatments,shortcut="Ctrl+Shift+S")
     act=AddMenuAction(self,mnEdit,"Table Invoices",self.OnTblInvoices,shortcut="Ctrl+Shift+D")
+    act=AddMenuAction(self,mnEdit,"Table Account",self.OnTblAccount,shortcut="Ctrl+Shift+F")
     act=AddMenuAction(self,mnEdit,"Client",self.OnQryClient,shortcut="Ctrl+A")
     act=AddMenuAction(self,mnEdit,"Treatment",self.OnQryTreatment)
     act=AddMenuAction(self,mnEdit,"Invoice",self.OnQryInvoice)
@@ -519,6 +520,13 @@ class WndMain(qtw.QMainWindow):
   def OnTblInvoices(self):
     print("OnTblInvoices")
     wnd=WndSqlTblView('TblInvoices:','Invoice',geometry=(100,100,600,700))
+    for i in range(wnd.mdl.columnCount()):
+      wnd.tbl.resizeColumnToContents(i)
+    WndChildAdd(wnd)
+
+  def OnTblAccount(self):
+    print("OnTblAccount")
+    wnd=WndSqlTblView('TblAccount:','Account',geometry=(100,100,600,700))
     for i in range(wnd.mdl.columnCount()):
       wnd.tbl.resizeColumnToContents(i)
     WndChildAdd(wnd)

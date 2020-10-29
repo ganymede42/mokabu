@@ -104,6 +104,50 @@ class MoKaBu:
     repBeh.publish()
     report.default_app_open(fn);
 
+  def sync_invoice(self,fn='Kontoauszug_2020_10_09.csv'):
+    import csv,re,time
+    db=self.db
+    dbc=self.dbc
+    dbc.execute("SELECT dtEvent,comment,refNr,refText,amount FROM Account")
+    #dbc.execute("SELECT dtEvent+refNr+comment+refText,amount FROM Account")
+    account=dbc.fetchall()
+    account=set(account)
+
+    fh = open(fn)
+    rows = csv.reader(fh,delimiter=';')
+    sqlData=[]
+    header=rows.__next__()
+    #['\ufeffDatum', 'Valuta', 'Buchungstext', 'Belastung', 'Gutschrift', 'Saldo']
+    for refDat,valuta,text,belastung,gutschrift,saldo in rows:
+      if gutschrift!='':
+        amount=float(gutschrift.replace("'",''))
+      else:
+        amount=-float(belastung.replace("'",''))
+      dtEvent=refDat
+      dtEvent=time.strptime(dtEvent,'%d.%m.%Y')
+      dtEvent=time.strftime('%Y-%m-%d',dtEvent)
+      #re.match('(.*?)([/\s]+Ref\.*-Nr\.*\s*)(\d*)(\s*)(.*)',text).groups()
+      m=re.match('\s+(.*?)[/\s]+Ref\.*-Nr\.*\s*(\d*)\s*(.*)',text)
+      if m:
+        comment,refNr,refText=m.groups()
+        refText=refText.strip()
+        refNr=int(refNr)
+      else:
+        comment=text.strip()
+        refNr=refText=None
+      #key=dtEvent+str(refNr)+comment+refText
+      key=(dtEvent,comment,refNr,refText,amount)
+      if key in account:
+        print('ignore duplicate:',key)
+        continue
+      sqlData.append((dtEvent,comment,refNr,refText,amount))
+
+    dbc.executemany("INSERT INTO Account (dtEvent,comment,refNr,refText,amount) VALUES (?,?,?,?,?)", sqlData)
+    db.commit()
+    #db.close()
+    #try:
+    #except lite.Error as e:
+    #  print(schema+" Error %s:" % e.args[0])
 
 
 
@@ -122,6 +166,9 @@ if __name__=='__main__':
     mkb.report_invoice();exit(0)
   if args.mode&2:
     mkb.report_therapy_progress();exit(0)
+  if args.mode&4:
+    mkb.sync_invoice();exit(0)
+
 
   import qtgui
   qtgui.MainApp(mkb)

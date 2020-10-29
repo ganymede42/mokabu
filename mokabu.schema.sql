@@ -67,30 +67,31 @@ CREATE UNIQUE INDEX IdxPerson ON Person (id);
 CREATE TABLE Invoice (
 	id INTEGER NOT NULL,
 	fkPerson INTEGER,
+	fkAccount INTEGER,
 	tplInvoice INTEGER, --invoice template
 	dtInvoice DATETIME,
 	comment TEXT,
 	CONSTRAINT CpkInvoice PRIMARY KEY (id),
-	CONSTRAINT CfkInvoice_fkPerson FOREIGN KEY (fkPerson) REFERENCES Person(id)
+	CONSTRAINT CfkInvoice_fkPerson FOREIGN KEY (fkPerson) REFERENCES Person(id),
+	CONSTRAINT CfkInvoice_fkAccount FOREIGN KEY (fkAccount) REFERENCES Account(id)
 );
 CREATE UNIQUE INDEX IdxInvoice ON Invoice (id);
 CREATE INDEX IdxInvoice_fkPerson ON Invoice (fkPerson);
+CREATE INDEX IdxInvoice_fkAccount ON Invoice (fkAccount);
 
 
 -- TABLE Account definition
 
 CREATE TABLE Account (
 	id INTEGER NOT NULL,
-	fkInvoice INTEGER,
-	dtPayment DATETIME,
+	dtEvent DATETIME, --date of money transfer
 	amount NUMERIC,
-	reference TEXT,
+	refNr NUMERIC,
+	refText TEXT,
 	comment TEXT,
-	CONSTRAINT CpkAccount PRIMARY KEY (id),
-	CONSTRAINT CfkAccount_fkInvoice FOREIGN KEY (fkInvoice) REFERENCES Invoice(id)
+	CONSTRAINT CpkAccount PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX IdxAccount ON Account (id);
-CREATE INDEX IdxAccount_fkInvoice ON Account (fkInvoice);
 
 
 -- TABLE Treatment definition
