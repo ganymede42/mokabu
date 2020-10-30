@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 #https://www.tutorialspoint.com/pyqt/pyqt_hello_world.htm
 #https://github.com/tpgit/MDIImageViewer usefull sample application
-import sys
+import sys,time
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtCore as qtc
 import PyQt5.QtCore as qtc
@@ -248,19 +248,19 @@ class WndNewInvoices(qtw.QWidget):
 
 
     #Adding sql table for treatments
-    self.tbTreatment=tbTrt=qtw.QTableWidget(1,5)#rows cols
+    self.tbTreatment=tbTrt=qtw.QTableWidget(1,6)#rows cols
     tbTrt.cellDoubleClicked.connect(self.ObTbTrtCblClick)
 
-    tbTrt.setHorizontalHeaderLabels(('id','date','comment','lstName','fstName'))
+    tbTrt.setHorizontalHeaderLabels(('id','fkPerson','date','lstName','fstName','comment'))
     hh=tbTrt.horizontalHeader()
     hh.setMinimumSectionSize(20)
     vh=tbTrt.verticalHeader()
     vh.setDefaultSectionSize(20)
     #qTbl.resizeColumnsToContents()
-    for i,w in enumerate((40,100,270,100,100)):
+    for i,w in enumerate((40,40,120,130,100,270)):
       tbTrt.setColumnWidth(i,w)
     #qTbl.setFixedWidth(400)
-    tbTrt.setMinimumWidth(700)
+    tbTrt.setMinimumWidth(760)
     tbTrt.setMinimumHeight(600)
     #loF.addRow('Treatments',tbTrt)
     loV.addWidget(tbTrt)
@@ -271,14 +271,14 @@ class WndNewInvoices(qtw.QWidget):
   def FillTreatment(self):
     dbc=self.dbc
     tbTrt=self.tbTreatment
-    sqlData=dbc.execute('SELECT trt.id,fkPerson,dtTreatment,trt.comment,lstName,fstName FROM Treatment trt LEFT JOIN Person ps on trt.fkPerson=ps.id  WHERE fkInvoice is NULL ORDER BY ps.id,dtTreatment').fetchall()
+    sqlData=dbc.execute('SELECT trt.id,fkPerson,dtTreatment,lstName,fstName,trt.comment FROM Treatment trt LEFT JOIN Person ps on trt.fkPerson=ps.id  WHERE fkInvoice is NULL ORDER BY ps.id,dtTreatment').fetchall()
     tbTrt.clearContents()
     tbTrt.setRowCount(len(sqlData))
-    self.lstTrtId=lstTrtId=list()
+    self.lstKey=lstKey=list()
 
     for ir,row in enumerate(sqlData):
-      id=row[0];lstTrtId.append(id)
-      for ic,data in enumerate(row[1:]):
+      key=row[1];lstKey.append(key)
+      for ic,data in enumerate(row[0:]):
         if data is None: data=''
         else: data=str(data)
         tw=qtw.QTableWidgetItem(data)
@@ -292,7 +292,23 @@ class WndNewInvoices(qtw.QWidget):
 
 
 
-  def ObTbTrtCblClick(self):
+  def ObTbTrtCblClick(self,row,col):
+    fkPerson=self.lstKey[row]
+    print('Build invoice for fkPerson %d',fkPerson)
+    app=qtw.QApplication.instance()
+    db=app.mkb.db
+    dbc=db.cursor()
+
+    sqlStr='INSERT INTO Invoice (fkPerson,dtInvoice) VALUES (?,?)'
+    dbc.execute(sqlStr,(fkPerson,time.strftime('%Y-%m-%d',time.gmtime())))
+    #db.commit()
+    pkInvoice=dbc.execute('SELECT MAX(id) FROM Invoice').fetchone()[0]
+
+    sqlStr='UPDATE Treatment SET fkInvoice=? WHERE fkInvoice IS NULL AND fkPerson=?'
+    dbc.execute(sqlStr,(pkInvoice,fkPerson))
+    db.commit()
+    app.mkb.report_invoice('iv.id=%d'%pkInvoice)
+    self.FillTreatment()
     return
 
 #    self.cbNaVo=cb=qtw.QComboBox()

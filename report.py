@@ -125,6 +125,9 @@ class Invoice():
       data=[('Datum','Tarif','Tarifziffer','Inhalt',rlp.Paragraph('Anzahl a 15min',styR),'Kosten',)]
       totSum=0.
       for datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif in behandlungen:
+        if Stundenansatz is None: Stundenansatz=0
+        if Dauer is None: Dauer=0
+        if TarZif is None:TarZif=''
         tot=Stundenansatz*Dauer/60
         totSum+=tot
         #pBemerkung=
@@ -151,6 +154,8 @@ class Invoice():
       data=[('Datum','Stundenansatz','Minuten','Total',)]
       totSum=0.
       for datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif in behandlungen:
+        if Stundenansatz is None: Stundenansatz=0
+        if Dauer is None: Dauer=0
         tot=Stundenansatz*Dauer/60
         totSum+=tot
         #pBemerkung=
