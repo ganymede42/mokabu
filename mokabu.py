@@ -171,7 +171,8 @@ if __name__=='__main__':
 
 
   import qtgui
-  qtgui.MainApp(mkb)
+  dbg=1#+2+4
+  qtgui.MainApp(mkb,dbg)
 
   mkb.close()
 

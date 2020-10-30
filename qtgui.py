@@ -11,7 +11,7 @@ import mokabu
 import wordprocessor as wp
 
 
-def MainApp(mkb):
+def MainApp(mkb,dbg):
   app=qtw.QApplication(sys.argv)
   app.mkb=mkb
   app.db=db=qtdb.QSqlDatabase.addDatabase('QSQLITE')
@@ -25,12 +25,46 @@ def MainApp(mkb):
 
   #mainWnd.OnQryClient()
 
+  if dbg&1:
+    testPerson(mainWnd)
+  if dbg&2:
+    testInvoice(mainWnd)
+  if dbg&4:
+    testTreatment(mainWnd,idx=1)
+
   #wpWnd=wp.MainWindow()
   #wpWnd.record_open(1)
   #WndChildAdd(wpWnd)
   #app.topLevelWindows()
   #app.topLevelWidgets()
   sys.exit(app.exec_())
+
+def testPerson(mainWnd,idx=39):
+  wnd=WndPerson('WndPerson: %s'%'TESTING')
+  wnd.cbNaVo.setCurrentIndex(idx)
+  wnd.OnCbSelChanged(idx)#go to idx person
+  sub=qtw.QMdiSubWindow()
+  sub.setWidget(wnd)
+  mainWnd.mdi.addSubWindow(sub)
+  sub.show()
+
+def testInvoice(mainWnd,idx=0,fkPerson=40):
+  wnd=WndInvoice('WHERE fkPerson=%d'%fkPerson,'WndInvoice: %s'%'TESTING')
+  wnd.cbRng.setCurrentIndex(idx)
+  wnd.OnCbSelChanged(idx)#go to first invoice
+  sub=qtw.QMdiSubWindow()
+  sub.setWidget(wnd)
+  mainWnd.mdi.addSubWindow(sub)
+  sub.show()
+
+def testTreatment(mainWnd,idx=0,fkPerson=40):
+  wnd=WndTreatment('WHERE fkPerson=%d'%fkPerson,'WndTreatment: %s'%'TESTING')
+  wnd.cbTrt.setCurrentIndex(idx)
+  wnd.OnCbSelChanged(idx)#go idx treatment
+  sub=qtw.QMdiSubWindow()
+  sub.setWidget(wnd)
+  mainWnd.mdi.addSubWindow(sub)
+  sub.show()
 
 def WndChildAdd(wnd):
   app=qtw.QApplication.instance()
@@ -45,6 +79,62 @@ def WndChildRemove(wnd):
   print("WndChildRemove",wnd,app.wndTop)
   app.wndTop.remove(wnd)
 
+def SqlUpdate(fldLst,table,sqlWhere=None):
+  sqlFld=list()
+  sqlUpd=list()
+  ''
+  for w in fldLst:
+    fld=w.windowTitle()
+    try:
+      val=w.text()
+    except AttributeError:
+      val=w.toPlainText()
+    if val=='':val=None
+    if fld=='id' and sqlWhere is None:
+      sqlWhere=' WHERE '+fld+'=?'
+      valWhere=val
+    else:
+      sqlFld.append(fld+'=?')
+      sqlUpd.append(val)
+  sqlUpd.append(valWhere)
+  sqlStr='UPDATE '+table+' SET '+ ','.join(sqlFld) +sqlWhere
+
+  print(sqlStr,sqlUpd)
+  app=qtw.QApplication.instance()
+  db=app.mkb.db
+  dbc=db.cursor()
+  dbc.execute(sqlStr,sqlUpd)
+  #db.execute(sqlStr,sqlUpd)
+  db.commit()
+
+def SqlInsert(fldLst,table):
+  sqlFld=list()
+  sqlUpd=list()
+  ''
+  for w in fldLst:
+    fld=w.windowTitle()
+    try:
+      val=w.text()
+    except AttributeError:
+      val=w.toPlainText()
+    if val=='':val=None
+    if fld=='id':
+      continue
+    else:
+      sqlFld.append(fld)
+      sqlUpd.append(val)
+  sqlStr='INSERT INTO '+table+' ('+ ','.join(sqlFld)+') VALUES ('+'?,'*(len(sqlFld)-1)+'?)'
+
+  print(sqlStr,sqlUpd)
+  app=qtw.QApplication.instance()
+  db=app.mkb.db
+  dbc=db.cursor()
+  dbc.execute(sqlStr,sqlUpd)
+  #db.execute(sqlStr,sqlUpd)
+  db.commit()
+
+
+
 #Here a clean Main Window implementation.
 #QMainWindow has compares to a QWidgets by default dockerbars for toolbars statusbar and menuBar
 # #https://www.learnpyqt.com/courses/start/basic-widgets/
@@ -56,7 +146,12 @@ def AddMenuAction(widget,parentMenu,txt,func,**kwargs):
   return act
 
 
-def SqlWidget(txt,qWndType):
+def SqlWidget(txt,qWndType=None):
+  if qWndType is None:
+    if txt=='id' or txt.startswith('fk'):
+      qWndType=qtw.QLabel
+    else:
+      qWndType=qtw.QLineEdit
   w=qWndType()
   w.setWindowTitle(txt)
   return w
@@ -134,9 +229,9 @@ class WndSqlTblView(qtw.QWidget):
   def debug(self):
     self.tbl
 
-class WndClient(qtw.QWidget):
+class WndPerson(qtw.QWidget):
   def __init__(self,title,geometry=(100,100,400,500)):
-    super(WndClient,self).__init__()
+    super(WndPerson,self).__init__()
     self.setGeometry(*geometry)
     self.setWindowTitle(title)
 
@@ -170,7 +265,7 @@ class WndClient(qtw.QWidget):
     cpl=qtw.QCompleter(cmpNaVo)
     #cpl=qtw.QCompleter(cb.model())
     cb.setCompleter(cpl)
-    cb.currentIndexChanged.connect(self.cbSelChanged)
+    cb.currentIndexChanged.connect(self.OnCbSelChanged)
 
     loF.addRow('Suche',cb)
     self.fldLst=fldLst=list()
@@ -179,23 +274,22 @@ class WndClient(qtw.QWidget):
                  'fstName','phone','phone1','phone2','dtBirth','eMail','eMail1','eMail2','ahvNr',
                  ('comment',qtw.QTextEdit) ):
       if type(desc)==str:
-        txt=desc;qWndType=qtw.QLineEdit
+        w=SqlWidget(desc);txt=desc
       else:
-        txt,qWndType=desc
-      w=SqlWidget(txt,qWndType)
+        w=SqlWidget(*desc);txt=desc[0]
       fldLst.append(w)
       loF.addRow(txt,w)
 
-    for txt,func in (("Treatment",self.OnWndTreatment),("Invoice",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress),("Save",self.OnSave)):
+    for txt,func in (("Treatment",self.OnWndTreatment),("Invoice",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress),("New",self.OnNew),("Save",self.OnSave)):
       btn=qtw.QPushButton(txt,self)
       if func is not None:
         btn.clicked.connect(func)
       loH.addWidget(btn)
 
-  def cbSelChanged(self,i):
+  def OnCbSelChanged(self,i):
     cb=self.cbNaVo
     curData=cb.currentData()
-    #print("cbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
+    #print("OnCbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
     if cb.currentData() is None:
       print("TODO:New Person inserted")
       cb.removeItem(i)
@@ -239,33 +333,20 @@ class WndClient(qtw.QWidget):
     sub.show()
 
   def OnSave(self):
-    sqlFld=list()
-    sqlUpd=list()
-    sqlWhere=list()
-    ''
     for w in self.fldLst:
       fld=w.windowTitle()
-      try:
-        val=w.text()
-      except AttributeError:
-        val=w.toPlainText()
-      if val=='':val=None
-      if fld=='id':
-        sqlWhere=' WHERE '+fld+'=?'
-        valWhere=val
-      else:
-        sqlFld.append(fld+'=?')
-        sqlUpd.append(val)
-    sqlUpd.append(valWhere)
-    sqlStr='UPDATE Person SET '+ ','.join(sqlFld) +sqlWhere
+      if fld!='id': continue
+      id=w.text()
+    if id=='':
+      SqlInsert(self.fldLst,'Person')
+    else:
+      SqlUpdate(self.fldLst,'Person')
 
-    print(sqlStr,sqlUpd)
-    app=qtw.QApplication.instance()
-    db=app.mkb.db
-    dbc=db.cursor()
-    dbc.execute(sqlStr,sqlUpd)
-    #db.execute(sqlStr,sqlUpd)
-    db.commit()
+  def OnNew(self):
+    self.cbNaVo.setCurrentIndex(-1)
+    for w in self.fldLst:
+      w.setText('')
+
 
 
 class WndTreatment(qtw.QWidget):
@@ -299,32 +380,36 @@ class WndTreatment(qtw.QWidget):
     cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
     cpl=qtw.QCompleter(cmpTrt)
     cb.setCompleter(cpl)
-    cb.currentIndexChanged.connect(self.cbSelChanged)
+    cb.currentIndexChanged.connect(self.OnCbSelChanged)
 
     loF.addRow('Suche',cb)
     self.fldLst=fldLst=list()
 
+
     for txt in ('id','fkInvoice','fkPerson','dtTreatment','duration','costPerHour','comment','tarZif'):
-      w=qtw.QLineEdit();w.setWindowTitle(txt)
+      w=SqlWidget(txt)
       fldLst.append(w)
       loF.addRow(txt,w)
 
     txt='document'
-    w=qtw.QTextEdit();w.setWindowTitle(txt)
+    w=SqlWidget(txt,qtw.QTextEdit)
+    w.setMinimumWidth(1000) #TODO...
+    w.setMaximumHeight(400) #TODO...
+
     fldLst.append(w)
     loF.addRow(txt,w)
 
-    for txt,func in (("Treatments",self.OnWndTreatment),):#("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
+    for txt,func in (("Ext. Edit",self.OnWndTreatment),("Save",self.OnSave)):#("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
       btn=qtw.QPushButton(txt,self)
       if func is not None:
         btn.clicked.connect(func)
       loH.addWidget(btn)
 
 
-  def cbSelChanged(self,i):
+  def OnCbSelChanged(self,i):
     cb=self.cbTrt
     curData=cb.currentData()
-    #print("cbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
+    #print("OnCbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
     if cb.currentData() is None:
       print("TODO:New Person inserted")
       cb.removeItem(i)
@@ -345,6 +430,9 @@ class WndTreatment(qtw.QWidget):
     wpWnd=wp.MainWindow()
     wpWnd.record_open(pkBehandlung)
     WndChildAdd(wpWnd)
+
+  def OnSave(self):
+    SqlUpdate(self.fldLst,'Treatment')
 
 
 class WndInvoice(qtw.QWidget):
@@ -382,34 +470,40 @@ class WndInvoice(qtw.QWidget):
     cpl=qtw.QCompleter(cmpRng)
     #cpl=qtw.QCompleter(cb.model())
     cb.setCompleter(cpl)
-    cb.currentIndexChanged.connect(self.cbSelChanged)
+    cb.currentIndexChanged.connect(self.OnCbSelChanged)
 
     loF.addRow('Suche',cb)
+
+
     self.fldLst=fldLst=list()
 
     for txt in ('id','fkPerson','fkAccount','tplInvoice','dtInvoice'):
-      w=qtw.QLineEdit()
+      w=SqlWidget(txt)
       fldLst.append(w)
       loF.addRow(txt,w)
 
-    w=qtw.QTextEdit()
+    txt='comment'
+    w=SqlWidget(txt,qtw.QTextEdit)
+    w.setMinimumWidth(200)
+    w.setMinimumHeight(40)
     fldLst.append(w)
-    loF.addRow('comment',w)
+    loF.addRow(txt,w)
 
     #Adding sql table for treatments
-    self.mdl=mdl = qtdb.QSqlTableModel()
-    #qry=qtdb.QSqlQuery('SELECT * from tblBehandlung')
-    #mdl.setQuery(qry)
-    mdl.setEditStrategy(qtdb.QSqlTableModel.OnFieldChange)
-    mdl.select()
-    #mdl.setHeaderData(0,qtc.Qt.Horizontal,'pkPerson')
-    self.tbl=view=qtw.QTableView()
-    view.setModel(mdl)
-    vh=view.verticalHeader()
-    vh.setDefaultSectionSize(22)
-    #vh.setCascadingSectionResizes(True)
-    vh.setMinimumSectionSize(16)
-    loF.addRow('Treatments',view)
+    self.tbTreatment=tbTrt=qtw.QTableWidget(2,4)#rows cols
+    tbTrt.cellDoubleClicked.connect(self.ObTbTrtCblClick)
+
+    tbTrt.setHorizontalHeaderLabels(('date','min','comment','Fr/h',))
+    hh=tbTrt.horizontalHeader()
+    hh.setMinimumSectionSize(20)
+    vh=tbTrt.verticalHeader()
+    vh.setDefaultSectionSize(20)
+    #qTbl.resizeColumnsToContents()
+    for i,w in enumerate((100,40,270,40)):
+      tbTrt.setColumnWidth(i,w)
+    #qTbl.setFixedWidth(400)
+    tbTrt.setMinimumWidth(500)
+    loF.addRow('Treatments',tbTrt)
 
     #for txt,func in (("Behandlungen",self.OnWndTreatment),("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress),("Save",self.OnSave)):
     for txt,func in (("Report Invoice",self.OnRptInvoice),("Save",self.OnSave)):
@@ -418,30 +512,53 @@ class WndInvoice(qtw.QWidget):
         btn.clicked.connect(func)
       loH.addWidget(btn)
 
-  def cbSelChanged(self,i):
-    cb=self.cbRng
-    curData=cb.currentData()
-    #print("cbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
-    if cb.currentData() is None:
-      print("TODO:New Person inserted")
-      cb.removeItem(i)
-    else:
-      dbc=self.dbc
-      d=dbc.execute('SELECT * FROM Invoice WHERE id=%d'%curData).fetchone()
-      #print(d)
-      for w,d in zip(self.fldLst,d):
-        if d is None:
-          d=''
-        else:
-          d=str(d)
-        w.setText(d)
-    mdl=self.mdl
-    mdl.setTable('Treatment')
-    mdl.setFilter('fkInvoice=%d'%curData)
-    mdl.select()
-    #qry=qtdb.QSqlQuery('SELECT id,fkInvoice,fkPerson,dtTreatment,duration,costPerHour,comment,tarZif FROM Treatment WHERE fkInvoice=%d'%curData)
-    #mdl.setQuery(qry)
+  def ObTbTrtCblClick(self,row,col):
+    trtId=self.lstTrtId[row]
+    print('Open treatment',trtId)
+    wnd=WndTreatment('WHERE id=%d'%trtId,'WndTreatment: trtId==%d'%trtId)
+    idx=0
+    wnd.cbTrt.setCurrentIndex(idx)
+    wnd.OnCbSelChanged(idx)#go to first invoice
 
+    sub=qtw.QMdiSubWindow()
+    sub.setWidget(wnd)
+    #sub.setWindowTitle("subwindow"+str(MainWindow.count))
+    self.parent().parent().parent().parent().mdi.addSubWindow(sub)
+    sub.show()
+
+
+    return
+
+  def OnCbSelChanged(self,i):
+    cb=self.cbRng
+    pkInvoice=cb.currentData()
+    #print("OnCbSelChanged index",i,"selection changed ",cb.currentIndex(),str(pkInvoice),cb.currentText())
+    if pkInvoice is None: return
+    dbc=self.dbc
+    d=dbc.execute('SELECT * FROM Invoice WHERE id=%d'%pkInvoice).fetchone()
+    #print(d)
+    for w,d in zip(self.fldLst,d):
+      if d is None:
+        d=''
+      else:
+        d=str(d)
+      w.setText(d)
+    sqlData=dbc.execute('SELECT id,dtTreatment,duration,comment,costPerHour FROM Treatment WHERE fkInvoice=%d;'%pkInvoice).fetchall()
+    tbTrt=self.tbTreatment
+    tbTrt.clearContents()
+    tbTrt.setRowCount(len(sqlData))
+    self.lstTrtId=lstTrtId=list()
+
+    for ir,row in enumerate(sqlData):
+      id=row[0];lstTrtId.append(id)
+      for ic,data in enumerate(row[1:]):
+        tw=qtw.QTableWidgetItem(str(data))
+        tw.setFlags(qtc.Qt.ItemIsEnabled|qtc.Qt.ItemIsSelectable)
+        if ic!=2: tw.setTextAlignment(qtc.Qt.AlignCenter)
+        #tw=qtw.QTableWidgetItem(str(data),type=int)
+        #qtc.Qt.ItemIsEnabled
+        tbTrt.setItem(ir,ic,tw)
+    return
 
   def OnRptInvoice(self):
     print('OnRptInvoice')
@@ -450,12 +567,8 @@ class WndInvoice(qtw.QWidget):
     app.mkb.report_invoice('iv.id=%d'%curData)
 
   def OnSave(self):
-    #d=dbc.execute('SELECT * FROM tblPerson WHERE pkPerson=%d'%curData).fetchone()
-    #print(d)
-    for w in self.fldLst:
-      fld=w.windowTitle()
-      txt=w.text()
-      print('UPDATE %s with %s'%(fld,txt))
+    SqlUpdate(self.fldLst,'Invoice')
+
 
 class WndMain(qtw.QMainWindow):
 
@@ -536,7 +649,7 @@ class WndMain(qtw.QMainWindow):
 
   def OnQryClient(self):
     print("OnQryClient")
-    wnd=WndClient('QryClient')
+    wnd=WndPerson('QryClient')
     sub=qtw.QMdiSubWindow()
     sub.setWidget(wnd)
     #sub.setWindowTitle("subwindow"+str(MainWindow.count))
