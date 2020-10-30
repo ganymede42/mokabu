@@ -436,8 +436,11 @@ class WndInvoice(qtw.QWidget):
           d=str(d)
         w.setText(d)
     mdl=self.mdl
-    qry=qtdb.QSqlQuery('SELECT id,fkInvoice,fkPerson,dtTreatment,duration,costPerHour,comment,tarZif FROM Treatment WHERE fkInvoice=%d'%curData)
-    mdl.setQuery(qry)
+    mdl.setTable('Treatment')
+    mdl.setFilter('fkInvoice=%d'%curData)
+    mdl.select()
+    #qry=qtdb.QSqlQuery('SELECT id,fkInvoice,fkPerson,dtTreatment,duration,costPerHour,comment,tarZif FROM Treatment WHERE fkInvoice=%d'%curData)
+    #mdl.setQuery(qry)
 
 
   def OnRptInvoice(self):
@@ -501,7 +504,7 @@ class WndMain(qtw.QMainWindow):
   def OnTblClients(self):
     print("OnTblClients")
     wnd=WndSqlTblView('TblClients:','Person')
-    #wnd=WndSqlTblView('TblClients:','SELECT * FROM tblPerson')
+    #wnd=WndSqlTblView('TblClients:','SELECT * FROM Person WHERE id<10')
     #wnd=WndSqlTblView('TblClients:',
     #                  'SELECT RngAnrede,RngNachname,RngVorname,RngAdresse,RngAdresse1,PLZ,Ort FROM tblPerson ORDER BY RngNachname,RngVorname',
     #                  geometry=(100,100,1200,700))
