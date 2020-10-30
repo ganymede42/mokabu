@@ -33,6 +33,9 @@ def MainApp(mkb,dbg):
     testTreatment(mainWnd,idx=1)
   if dbg&8:
     mainWnd.OnWndNewInvoices()
+  if dbg&16:
+    mainWnd.OnWndSyncIvcAcc()
+
 
   #wpWnd=wp.MainWindow()
   #wpWnd.record_open(1)
@@ -249,7 +252,7 @@ class WndNewInvoices(qtw.QWidget):
 
     #Adding sql table for treatments
     self.tbTreatment=tbTrt=qtw.QTableWidget(1,6)#rows cols
-    tbTrt.cellDoubleClicked.connect(self.ObTbTrtCblClick)
+    tbTrt.cellDoubleClicked.connect(self.OnTbTrtDblClick)
 
     tbTrt.setHorizontalHeaderLabels(('id','fkPerson','date','lstName','fstName','comment'))
     hh=tbTrt.horizontalHeader()
@@ -292,7 +295,7 @@ class WndNewInvoices(qtw.QWidget):
 
 
 
-  def ObTbTrtCblClick(self,row,col):
+  def OnTbTrtDblClick(self,row,col):
     fkPerson=self.lstKey[row]
     print('Build invoice for fkPerson %d',fkPerson)
     app=qtw.QApplication.instance()
@@ -311,51 +314,137 @@ class WndNewInvoices(qtw.QWidget):
     self.FillTreatment()
     return
 
-#    self.cbNaVo=cb=qtw.QComboBox()
-#    #self.cbNaVoPkPers
-#
-#    app=qtw.QApplication.instance()
-#    self.dbc=dbc=app.mkb.db.cursor()
-#    itemsNaVo=dbc.execute('SELECT id, lstName||" "||fstName FROM Person').fetchall()
-#
-#    #items=["Java","C#","Python"]
-#    cb.setEditable(True)
-#    #v=qtg.QIntValidator(100, 999, self) #QValidator()
-#    #cb.setValidator(v)
-#    #cb.InsertPolicy(qtw.QComboBox.NoInsert) does not work
-#    cmpNaVo=[]
-#    for pkPers,naVo in itemsNaVo:
-#      cmpNaVo.append(naVo)
-#      cb.addItem(naVo,pkPers)
-#    cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
-#    #cb.model()
-#    #cb.view()
-#
-#    cpl=qtw.QCompleter(cmpNaVo)
-#    #cpl=qtw.QCompleter(cb.model())
-#    cb.setCompleter(cpl)
-#    cb.currentIndexChanged.connect(self.OnCbSelChanged)
-#
-#    loF.addRow('Suche',cb)
-#    self.fldLst=fldLst=list()
-#
-#    for desc in ('id','ivcPrefix','ivcLstName','ivcFstName','ivcAddress','ivcAddress1','ivcAddress2','zipCode','city','lstName',
-#                 'fstName','phone','phone1','phone2','dtBirth','eMail','eMail1','eMail2','ahvNr',
-#                 ('comment',qtw.QTextEdit) ):
-#      if type(desc)==str:
-#        w=SqlWidget(desc);txt=desc
-#      else:
-#        w=SqlWidget(*desc);txt=desc[0]
-#      fldLst.append(w)
-#      loF.addRow(txt,w)
-#
-#    for txt,func in (("Treatment",self.OnWndTreatment),("Invoice",self.OnWndNewInvoices),("Report Treatment",self.OnRptTreatmentProgress),("New",self.OnNew),("Save",self.OnSave)):
-#      btn=qtw.QPushButton(txt,self)
-#      if func is not None:
-#        btn.clicked.connect(func)
-#      loH.addWidget(btn)
+
+class WndSyncIvcAcc(qtw.QWidget):
+  def __init__(self,title,geometry=(100,100,400,500)):
+    super(WndSyncIvcAcc,self).__init__()
+    self.setGeometry(*geometry)
+    self.setWindowTitle(title)
+
+    #https://doc-snapshots.qt.io/qt5-5.15/qformlayout.html
+    loV=qtw.QVBoxLayout(self)
+    loH=qtw.QHBoxLayout()
+    #loF=qtw.QFormLayout()
+
+    #loV.addLayout(loF)
+    loV.addLayout(loH)
 
 
+    app=qtw.QApplication.instance()
+    self.dbc=dbc=app.mkb.db.cursor()
+
+    #Adding sql table for Incoive
+    self.tbIvc=tbIvc=qtw.QTableWidget(1,7)#rows cols
+    #tbTrt.cellDoubleClicked.connect(self.OnTbTrtDblClick)
+
+    tbIvc.setHorizontalHeaderLabels(('id','cnt','fkAcc','date','lstName','fstName','sum'))
+    hh=tbIvc.horizontalHeader()
+    hh.setMinimumSectionSize(20)
+    vh=tbIvc.verticalHeader()
+    vh.setDefaultSectionSize(20)
+    #qTbl.resizeColumnsToContents()
+    for i,w in enumerate((40,40,40,100,100,100,50)):
+      tbIvc.setColumnWidth(i,w)
+    #qTbl.setFixedWidth(400)
+    tbIvc.setMinimumWidth(520)
+    tbIvc.setMinimumHeight(600)
+    tbIvc.cellDoubleClicked.connect(self.OnTblDblClick)
+    #loF.addRow('Treatments',tbTrt)
+    loH.addWidget(tbIvc)
+    self.FillInvoice()
+
+    #Adding sql table for Account
+    self.tbAcc=tbAcc=qtw.QTableWidget(1,4)#rows cols
+    tbAcc.setHorizontalHeaderLabels(('id','date','refText','sum'))
+    hh=tbAcc.horizontalHeader()
+    hh.setMinimumSectionSize(20)
+    vh=tbAcc.verticalHeader()
+    vh.setDefaultSectionSize(20)
+    #qTbl.resizeColumnsToContents()
+    for i,w in enumerate((40,100,240,50)):
+      tbAcc.setColumnWidth(i,w)
+    #qTbl.setFixedWidth(400)
+    tbAcc.setMinimumWidth(500)
+    tbAcc.setMinimumHeight(600)
+    tbAcc.cellDoubleClicked.connect(self.OnTblDblClick)
+
+    #loF.addRow('Treatments',tbTrt)
+    loH.addWidget(tbAcc)
+    self.FillAccout()
+
+
+
+  def FillInvoice(self):
+    dbc=self.dbc
+    tbIvc=self.tbIvc
+    sqlData=dbc.execute(\
+'''SELECT iv.id,COUNT(tr.id) AS cntTrt,fkAccount,dtInvoice,ivcLstName,ivcFstName,SUM(duration*costPerHour/60) AS cost
+   FROM Treatment tr LEFT JOIN Invoice iv  ON tr.fkInvoice=iv.id
+   LEFT JOIN Person ps ON tr.fkPerson=ps.id
+   WHERE iv.id NOT NULL
+   GROUP BY iv.id
+   ORDER BY dtInvoice''').fetchall()
+    tbIvc.clearContents()
+    tbIvc.setRowCount(len(sqlData))
+    self.lstKeyIvc=lstKey=list()
+
+    for ir,row in enumerate(sqlData):
+      key=row[0];lstKey.append(key)
+      for ic,data in enumerate(row[0:]):
+        if data is None: data=''
+        else: data=str(data)
+        tw=qtw.QTableWidgetItem(data)
+        tw.setFlags(qtc.Qt.ItemIsEnabled|qtc.Qt.ItemIsSelectable)
+        #if ic in (1,2: tw.setTextAlignment(qtc.Qt.AlignCenter)
+        #tw=qtw.QTableWidgetItem(str(data),type=int)
+        #qtc.Qt.ItemIsEnabled
+        tbIvc.setItem(ir,ic,tw)
+    return
+
+
+  def FillAccout(self):
+    dbc=self.dbc
+    tbAcc=self.tbAcc
+    sqlData=dbc.execute(\
+'''SELECT id,dtEvent,refText,amount FROM Account
+WHERE amount >0
+ORDER BY dtEvent''').fetchall()
+    tbAcc.clearContents()
+    tbAcc.setRowCount(len(sqlData))
+    self.lstKeyAcc=lstKey=list()
+
+    for ir,row in enumerate(sqlData):
+      key=row[0];lstKey.append(key)
+      for ic,data in enumerate(row[0:]):
+        if data is None: data=''
+        else: data=str(data)
+        tw=qtw.QTableWidgetItem(data)
+        tw.setFlags(qtc.Qt.ItemIsEnabled|qtc.Qt.ItemIsSelectable)
+        #if ic in (1,2: tw.setTextAlignment(qtc.Qt.AlignCenter)
+        #tw=qtw.QTableWidgetItem(str(data),type=int)
+        #qtc.Qt.ItemIsEnabled
+        tbAcc.setItem(ir,ic,tw)
+    return
+
+  def OnTblDblClick(self,row,col):
+    print('OnTblDblClick')
+    pkInvoice=self.lstKeyIvc[self.tbIvc.currentRow()]
+    pkAccount=self.lstKeyAcc[self.tbAcc.currentRow()]
+    app=qtw.QApplication.instance()
+    db=app.mkb.db
+    dbc=self.dbc
+    sqlStr='SELECT fkAccount FROM Invoice WHERE id=?'
+    oldVal=dbc.execute(sqlStr,(pkInvoice,)).fetchone()[0]
+    print(pkInvoice,pkAccount,oldVal)
+    if oldVal is not None:
+      pkAccount=None
+
+    sqlStr='UPDATE Invoice SET fkAccount=? WHERE id=?'
+    dbc.execute(sqlStr,(pkAccount,pkInvoice))
+    db.commit()
+    self.FillInvoice()
+
+    return
 
 
 
@@ -642,7 +731,7 @@ class WndInvoice(qtw.QWidget):
 
     #Adding sql table for treatments
     self.tbTreatment=tbTrt=qtw.QTableWidget(1,4)#rows cols
-    tbTrt.cellDoubleClicked.connect(self.ObTbTrtCblClick)
+    tbTrt.cellDoubleClicked.connect(self.OnTbTrtDblClick)
 
     tbTrt.setHorizontalHeaderLabels(('date','min','comment','Fr/h',))
     hh=tbTrt.horizontalHeader()
@@ -662,7 +751,7 @@ class WndInvoice(qtw.QWidget):
         btn.clicked.connect(func)
       loH.addWidget(btn)
 
-  def ObTbTrtCblClick(self,row,col):
+  def OnTbTrtDblClick(self,row,col):
     trtId=self.lstTrtId[row]
     print('Open treatment',trtId)
     wnd=WndTreatment('WHERE id=%d'%trtId,'WndTreatment: trtId==%d'%trtId)
@@ -832,6 +921,12 @@ class WndMain(qtw.QMainWindow):
 
   def OnWndSyncIvcAcc(self):
     print("OnWndSyncIvcAcc")
+    wnd=WndSyncIvcAcc('WndSyncIvcAcc')
+    sub=qtw.QMdiSubWindow()
+    sub.setWidget(wnd)
+    #sub.setWindowTitle("subwindow"+str(MainWindow.count))
+    self.mdi.addSubWindow(sub)
+    sub.show()
 
   def OnQryTreatment(self):
     print("OnQryTreatment")
