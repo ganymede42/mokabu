@@ -354,14 +354,14 @@ class WndSyncIvcAcc(qtw.QWidget):
     self.FillInvoice()
 
     #Adding sql table for Account
-    self.tbAcc=tbAcc=qtw.QTableWidget(1,4)#rows cols
-    tbAcc.setHorizontalHeaderLabels(('id','date','refText','sum'))
+    self.tbAcc=tbAcc=qtw.QTableWidget(1,5)#rows cols
+    tbAcc.setHorizontalHeaderLabels(('id','fkIvc','date','refText','sum'))
     hh=tbAcc.horizontalHeader()
     hh.setMinimumSectionSize(20)
     vh=tbAcc.verticalHeader()
     vh.setDefaultSectionSize(20)
     #qTbl.resizeColumnsToContents()
-    for i,w in enumerate((40,100,240,50)):
+    for i,w in enumerate((40,40,100,240,50)):
       tbAcc.setColumnWidth(i,w)
     #qTbl.setFixedWidth(400)
     tbAcc.setMinimumWidth(500)
@@ -388,13 +388,16 @@ class WndSyncIvcAcc(qtw.QWidget):
     tbIvc.setRowCount(len(sqlData))
     self.lstKeyIvc=lstKey=list()
 
+    col=qtg.QColor(196,255,196)  #qtg.QColor('yellow')
     for ir,row in enumerate(sqlData):
       key=row[0];lstKey.append(key)
       for ic,data in enumerate(row[0:]):
-        if data is None: data=''
-        else: data=str(data)
-        tw=qtw.QTableWidgetItem(data)
+        if data is None: strCell=''
+        else: strCell=str(data)
+        tw=qtw.QTableWidgetItem(strCell)
         tw.setFlags(qtc.Qt.ItemIsEnabled|qtc.Qt.ItemIsSelectable)
+        if row[2] is not None:
+          tw.setBackground(col)
         #if ic in (1,2: tw.setTextAlignment(qtc.Qt.AlignCenter)
         #tw=qtw.QTableWidgetItem(str(data),type=int)
         #qtc.Qt.ItemIsEnabled
@@ -406,20 +409,24 @@ class WndSyncIvcAcc(qtw.QWidget):
     dbc=self.dbc
     tbAcc=self.tbAcc
     sqlData=dbc.execute(\
-'''SELECT id,dtEvent,refText,amount FROM Account
+'''SELECT ac.id,iv.id,dtEvent,refText,amount FROM Account ac LEFT JOIN Invoice iv ON ac.id=iv.fkAccount
 WHERE amount >0
 ORDER BY dtEvent''').fetchall()
     tbAcc.clearContents()
     tbAcc.setRowCount(len(sqlData))
     self.lstKeyAcc=lstKey=list()
 
+    col=qtg.QColor(196,255,196)  #qtg.QColor('yellow')
     for ir,row in enumerate(sqlData):
       key=row[0];lstKey.append(key)
       for ic,data in enumerate(row[0:]):
-        if data is None: data=''
-        else: data=str(data)
-        tw=qtw.QTableWidgetItem(data)
+        if data is None: strCell=''
+        else: strCell=str(data)
+        tw=qtw.QTableWidgetItem(strCell)
         tw.setFlags(qtc.Qt.ItemIsEnabled|qtc.Qt.ItemIsSelectable)
+        if row[1] is not None:
+          tw.setBackground(col)
+
         #if ic in (1,2: tw.setTextAlignment(qtc.Qt.AlignCenter)
         #tw=qtw.QTableWidgetItem(str(data),type=int)
         #qtc.Qt.ItemIsEnabled
@@ -428,8 +435,13 @@ ORDER BY dtEvent''').fetchall()
 
   def OnTblDblClick(self,row,col):
     print('OnTblDblClick')
-    pkInvoice=self.lstKeyIvc[self.tbIvc.currentRow()]
-    pkAccount=self.lstKeyAcc[self.tbAcc.currentRow()]
+    tbIvc=self.tbIvc
+    tbAcc=self.tbAcc
+
+    rwIvc=tbIvc.currentRow()
+    rwAcc=tbAcc.currentRow()
+    pkInvoice=self.lstKeyIvc[rwIvc]
+    pkAccount=self.lstKeyAcc[rwAcc]
     app=qtw.QApplication.instance()
     db=app.mkb.db
     dbc=self.dbc
@@ -442,7 +454,30 @@ ORDER BY dtEvent''').fetchall()
     sqlStr='UPDATE Invoice SET fkAccount=? WHERE id=?'
     dbc.execute(sqlStr,(pkAccount,pkInvoice))
     db.commit()
-    self.FillInvoice()
+
+
+    twAcc=tbAcc.item(rwAcc,1)
+    twIvc=tbIvc.item(rwIvc,2)
+
+    if pkAccount is None:
+      strAcc=strIvc=''
+      col=qtg.QColor(255,255,255) # QColor('red')
+    else:
+      strAcc=str(pkInvoice)
+      strIvc=str(pkAccount)
+      col=qtg.QColor(196,255,196)#qtg.QColor('yellow')
+
+    twIvc.setText(strIvc) #  twIvc.setBackground(col)
+    twAcc.setText(strAcc) #  twAcc.setBackground(col)
+
+
+    for i in range(tbIvc.columnCount()):
+      tbIvc.item(rwIvc,i).setBackground(col)
+
+    for i in range(tbAcc.columnCount()):
+      tbAcc.item(rwAcc,i).setBackground(col)
+
+    #self.FillInvoice()
 
     return
 

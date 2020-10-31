@@ -171,7 +171,7 @@ if __name__=='__main__':
 
 
   import qtgui
-  dbg=16#0xf8
+  dbg=0#16#0xf8
   qtgui.MainApp(mkb,dbg)
 
   mkb.close()
