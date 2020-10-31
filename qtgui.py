@@ -916,8 +916,8 @@ class WndMain(qtw.QMainWindow):
       wnd.tbl.resizeColumnToContents(i)
     WndChildAdd(wnd)
   def OnTblTreatment(self):
-    prin("aOnTblTreatmen")
-    wn=WndSqlTblView('TblTreatments:','Treatment',geometry=(100,100,1200,700))
+    print("aOnTblTreatment")
+    wnd=WndSqlTblView('TblTreatments:','Treatment',geometry=(100,100,1200,700))
     for i in range(wnd.mdl.columnCount()):
       wnd.tbl.resizeColumnToContents(i)
     WndChildAdd(wnd)
