@@ -540,7 +540,7 @@ if __name__=='__main__':
                                      description=__doc__,
                                      epilog='Example:\n'+os.path.basename(sys.argv[0])+' '+exampleCmd+'\n ')
     parser.add_argument('--force', '-f', action='store_true', help='force doc2txt')
-    parser.add_argument('-p','--srcpath', default='/media/zamofing_t/DataHD/Praxis/Klienten/2020_Klienten', help='source path')
+    parser.add_argument('-p','--srcpath', default='/media/zamofing_t/DataHD/Praxis/KlientenMerge/all', help='source path')
     return parser
 
   parser=GetParser()
