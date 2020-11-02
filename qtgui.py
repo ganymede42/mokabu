@@ -602,7 +602,7 @@ class WndPerson(qtw.QWidget):
 
     app=qtw.QApplication.instance()
     self.dbc=dbc=app.mkb.db.cursor()
-    itemsNaVo=dbc.execute('SELECT id, lstName||" "||fstName FROM Person').fetchall()
+    itemsNaVo=dbc.execute('SELECT id, lstName||" "||fstName FROM Person ORDER BY lstName,fstName').fetchall()
 
     #items=["Java","C#","Python"]
     cb.setEditable(True)
@@ -916,7 +916,7 @@ class WndInvoice(qtw.QWidget):
       else:
         d=str(d)
       w.setText(d)
-    sqlData=dbc.execute('SELECT id,dtTreatment,duration,comment,costPerHour FROM Treatment WHERE fkInvoice=%d;'%pkInvoice).fetchall()
+    sqlData=dbc.execute('SELECT id,dtTreatment,duration,comment,costPerHour FROM Treatment WHERE fkInvoice=%d ORDER BY dtTreatment;'%pkInvoice).fetchall()
     tbTrt=self.tbTreatment
     tbTrt.clearContents()
     tbTrt.setRowCount(len(sqlData))
