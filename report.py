@@ -53,9 +53,10 @@ class Invoice():
     #(tplID>>2)&0x1:
     # 0: Normal
     # 1: IV mit Tarifziffer
-    if tplID==None:tplID=0
-    tplIV=(tplID>>2)&0x1
+    if tplID==None:tplID=0x8
     tplMahnung=tplID&0x3
+    tplIV=(tplID)&0x4
+    tplQR=(tplID)&0x8
 
     canvas=self.canvas
     styles=self.styles
@@ -74,7 +75,7 @@ class Invoice():
     frm=rlp.Frame(brd[0],brd[3],sz[0]-brd[0]-brd[1],sz[1]-brd[2]-brd[3],showBoundary=0)
 
     story=[]
-    im=rlp.Image("Logo_Monika.png",7*rlu.cm,2*rlu.cm)
+    im=rlp.Image("Logo_Monika_s.png",7*rlu.cm,2*rlu.cm)
     im.hAlign='RIGHT'
     story.append(im)
     story.append(rlp.Spacer(1,12))
@@ -202,6 +203,43 @@ class Invoice():
     txt='PS: Es kann über die Zusatzversicherung Ihrer Krankenkasse abgerechnet werden.'
     story.append(rlp.Paragraph(txt,styJ))
     frm.addFromList(story,canvas)
+
+    if tplQR:
+      fmt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis Weiterkommen Monika Kast Perry\nAlbisstrasse 11\n\n8038\nZürich\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\nS\n\n\n\n\n\n\nNON\n\n%s\nEPD'''
+      txt=fmt%(totSum,dateconvert(datRng)+' '+klient[8]+' '+klient[9])
+      #https://www.reportlab.com/docs/reportlab-graphics-reference.pdf
+      #https://www.paymentstandards.ch/dam/downloads/ig-qr-bill-de.pdf
+      #https://de.wikipedia.org/wiki/QR-Rechnung
+      #https://qr-rechnung.net/#/
+      from reportlab.graphics.shapes import Drawing
+      from reportlab.graphics.barcode import getCodes
+      outDir='/tmp/barcode'
+      os.makedirs(outDir,exist_ok=True)
+      w=getCodes()['QR'](txt)
+      w.barWidth=96
+      w.barHeight=96
+      g=w.draw()
+      #canvas.drawImage(...)
+      x0,y0,x1,y1=w.getBounds()
+      drw=Drawing(x1-x0,y1-y0)
+      drw.add(w)
+      x=16*rlu.cm;y=19*rlu.cm
+      drw.drawOn(canvas,x,y)
+      canvas.setFont("Helvetica", 8)
+      canvas.drawCentredString(x+1.7*rlu.cm,y-.1*rlu.cm,'QR-Rechnung')
+
+      #brd=(1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm)  #l,r,t,b
+      #l=brd[0];
+      #r=sz[0]-brd[1];
+      #t=sz[1]-brd[2];
+      #b=brd[3]
+
+      #story.append(drw)
+      #drw.save(formats=('gif',),outDir=outDir,fnRoot='QR')
+      #canvas.line(l,b,r,b)
+      #print('gen '+outDir+'/QR.gif')
+      #os.system('firefox '+outDir+'/QR.gif')
+
     canvas.showPage()
 
   def publish(self):
@@ -428,6 +466,31 @@ def test1(fn):
   doc=SimpleDocTemplate(fn)
   doc.build(story)
 
+def testBarcode():
+  #/home/zamofing_t/Documents/prj/Mokabu/scratch/reportlab/tests/test_graphics_barcode.py
+  txt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nAlbisstrasse 11\n\n8038\nZürich\nCH\n\n\n\n\n\n\n\n\nCHF\n\n\n\n\n\n\n\nNON\n\n\nEPD'''
+  txt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nAlbisstrasse 11\n\n8038\nZürich\nCH\n\n\n\n\n\n\n\n1234.00\nCHF\nS\nPersZahlung\nStrasseZahlung\n\n5430\nWettingen\nCH\nNON\n\nMitteilung\nEPD'''
+  fmt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nAlbisstrasse 11\n\n8038\nZürich\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\nS\n\n\n\n\n\n\nNON\n\n%s\nEPD'''
+  txt=fmt%(1234,'Mitteilung')
+  #https://www.paymentstandards.ch/dam/downloads/ig-qr-bill-de.pdf
+  #https://de.wikipedia.org/wiki/QR-Rechnung
+  #https://qr-rechnung.net/#/
+  from reportlab.graphics.shapes import Drawing
+  from reportlab.graphics.barcode import getCodes
+  outDir='/tmp/barcode'
+  os.makedirs(outDir,exist_ok=True)
+  i=getCodes()['QR'](txt)  #createBarcodeDrawing('QR',txt)
+  i.barWidth=300
+  i.barHeight=300
+
+  x0,y0,x1,y1=i.getBounds()
+  D=Drawing(x1-x0,y1-y0)
+  D.add(i)
+  D.save(formats=('gif',),outDir=outDir,fnRoot='QR')
+  print('gen '+outDir+'/QR.gif')
+  os.system('firefox '+outDir+'/QR.gif')
+  return
+
 
 if __name__ == '__main__':
 
@@ -446,7 +509,7 @@ if __name__ == '__main__':
       (('Frau ', 'Saki', 'Karakurt', 'Meierwiesenstrasse 24', '', '', '8107', 'Buchs', 'Bayraktar', 'Aras', '2012-02-15', '765.234.433.454'),
        ('Familie', 'Preisig U. &', 'C.', 'Sihlaustr. 3', '', '', '8134', 'Adliswil', 'Radic Baumgartner', 'Ksenija', '1975-06-18', None),)
     lstTpl=\
-      (None,0,1,2,4)
+      (None,0,1,2,4,8)
     lstDatRng=\
       (('2020-03-17'),('2020-06-26'),)
     lstBeh=\
@@ -510,6 +573,10 @@ if __name__ == '__main__':
   if args.mode&2:
     testTherapyProgress(fn%idx)
     default_app_open(fn%idx);idx+=1
+  if args.mode&4:
+    testBarcode()
+    #default_app_open(fn%idx);idx+=1
+
 
 
 
