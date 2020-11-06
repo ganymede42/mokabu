@@ -105,6 +105,7 @@ class MoKaBu:
     report.default_app_open(fn);
 
   def sync_invoice(self,fn='Kontoauszug_2020_10_09.csv'):
+    fn='Kontoauszug_04.11.2020 09_27_32.csv'
     import csv,re,time
     db=self.db
     dbc=self.dbc
