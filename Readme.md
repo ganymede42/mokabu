@@ -63,8 +63,6 @@ Gesammtberichte
 !!! Wichtig !!!
 ---------------
 ```
-- Nachdem <New> gedrückt wurde nur 1x Save drücken! Anschliessend Fenster schliessen und neu öffnen.
-- Bei Änderungen <Save> drücken, damit nichts verloren geht. Es wird keine Überprüfung von Änderungen gemacht.
 - Die nicht erwähnten Menupunkte sollten !NICHT! werwendet werden. Sie sind für die Entwicklung und Tests gedacht, und können die Datenbank beschädigen!
 ```
 
@@ -77,9 +75,15 @@ TODO:
 - Einfügen von Behandlungen in Rechnungen (nicht nur auto-assistant)
 - Tabelle der nicht verrechneten Behandlungen (Invoice mit id=-1)
 - Button (checkbox) um Behandlung zu 'nicht verrechnet' hinzufügn/entfernen
-- Besseres Handling von <New>
 - importieren neuer csv-Bankkonto-Files.
 - logging von Datenbank Aktionen
 - Bessere GUI Darstellung und resizing Verhalten der Formulare
 ```
 
+DONE IN THIS COMMIT
+-----
+```
+- Besseres Handling von <New>
+- Nachdem <New> gedrückt wurde nur 1x Save drücken! Anschliessend Fenster schliessen und neu öffnen.
+- Bei Änderungen <Save> drücken, damit nichts verloren geht. Es wird keine Überprüfung von Änderungen gemacht.
+```

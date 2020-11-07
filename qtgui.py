@@ -137,6 +137,9 @@ def SqlInsert(fldLst,table):
   dbc.execute(sqlStr,sqlUpd)
   #db.execute(sqlStr,sqlUpd)
   db.commit()
+  sqlStr='SELECT id FROM '+table
+  newid=dbc.execute(sqlStr).fetchall()[-1]
+  return newid
 
 
 
@@ -150,26 +153,82 @@ def AddMenuAction(widget,parentMenu,txt,func,**kwargs):
   parentMenu.addAction(act)
   return act
 
-
-def SqlWidget(txt,qWndType=None):
-  if qWndType is None:
-    if txt=='id' or txt.startswith('fk'):
-      qWndType=qtw.QLabel
-    else:
-      qWndType=qtw.QLineEdit
-  w=qWndType()
-  w.setWindowTitle(txt)
-  return w
-
-def MsgBox(msg,title="MessageBox",msgInfo=None,detail=None,btn=qtw.QMessageBox.Ok,icon=qtw.QMessageBox.Information):
+def MsgBox(msg,title="MessageBox",msgInfo=None,detail=None,btn=qtw.QMessageBox.Ok,icon=qtw.QMessageBox.Information,defBtn=None):
   dlg=qtw.QMessageBox()
   dlg.setWindowTitle(title)
   dlg.setText(msg)
   dlg.setIcon(icon)
+  dlg.setStandardButtons(btn)
   if msgInfo is not None: dlg.setInformativeText(msgInfo)
   if detail is not None: dlg.setDetailedText(detail)
-  dlg.setStandardButtons(btn)
+  if defBtn is not None: dlg.setDefaultButton(defBtn)
   return dlg.exec_()
+
+
+
+class WndSqlBase(qtw.QWidget):
+  def __init__(self,title,geometry=(100,100,400,500)):
+    super(WndSqlBase,self).__init__()
+    self.txtChanged=False
+
+  class Validator(qtg.QValidator):
+    'Validator for wndSqlBase Combobox class tht changes to a new record'
+
+    def __init__(self,wndSqlBase):
+      super(WndSqlBase.Validator,self).__init__()
+      self.wndSqlBase=wndSqlBase
+
+    #def validate(self,*args,**kwargs):
+    #  print(args,kwargs)
+
+    def validate(self,text,pos):
+      self.wndSqlBase.lastCbIdx=pos
+      print('Validator.validate',text,pos)
+      return (qtg.QValidator.Acceptable,text,pos)
+
+  def SqlWidget(self,txt,qWndType=None,onTxtChanged=None):
+    if qWndType is None:
+      if txt=='id' or txt.startswith('fk'):
+        qWndType=qtw.QLabel
+      else:
+        qWndType=qtw.QLineEdit
+    w=qWndType()
+    if  qWndType!=qtw.QLabel:
+      w.textChanged.connect(self.OnTxtChanged)
+    w.setWindowTitle(txt)
+    return w
+
+  def closeEvent(self, event):
+      print("User has clicked the red x on the main window")
+      if self.SwitchRecord()==True:
+        event.accept()
+      else:
+        event.ignore()
+
+  def OnTxtChanged(self):
+    self.txtChanged=True
+
+  def SwitchRecord(self):
+    #when close or change to new record ask to save
+    print('SwitchRecord',self.txtChanged)
+    if self.txtChanged is False: return True
+    res=MsgBox('save changes to actual record?',
+               btn=qtw.QMessageBox.Yes|qtw.QMessageBox.No|qtw.QMessageBox.Cancel,
+               icon=qtw.QMessageBox.Question)
+    print('pressed',res)
+    if res==qtw.QMessageBox.Yes:
+      self.OnSave()
+    elif res==qtw.QMessageBox.No:
+      self.txtChanged=False
+    elif res==qtw.QMessageBox.Cancel:
+      return False
+    return True
+
+  def OnSave(self):
+    raise BaseException('overload this function')
+
+#  def OnNew(self):
+#    raise BaseException('overload this function')
 
 
 class MdiArea(qtw.QMdiArea):
@@ -584,11 +643,9 @@ class WndSyncIvcAcc(qtw.QWidget):
           tbIvc.item(idxIvc,i).setBackground(col)
 
 
-class WndPerson(qtw.QWidget):
+class WndPerson(WndSqlBase):
   def __init__(self,title,geometry=(100,100,400,500)):
-    super(WndPerson,self).__init__()
-    self.setGeometry(*geometry)
-    self.setWindowTitle(title)
+    super(WndPerson,self).__init__(title,geometry)
 
     #https://doc-snapshots.qt.io/qt5-5.15/qformlayout.html
     loV=qtw.QVBoxLayout(self)
@@ -598,28 +655,22 @@ class WndPerson(qtw.QWidget):
     loV.addLayout(loF)
     loV.addLayout(loH)
     self.cbNaVo=cb=qtw.QComboBox()
-    #self.cbNaVoPkPers
 
     app=qtw.QApplication.instance()
     self.dbc=dbc=app.mkb.db.cursor()
     itemsNaVo=dbc.execute('SELECT id, lstName||" "||fstName FROM Person ORDER BY lstName,fstName').fetchall()
 
-    #items=["Java","C#","Python"]
     cb.setEditable(True)
-    #v=qtg.QIntValidator(100, 999, self) #QValidator()
-    #cb.setValidator(v)
-    #cb.InsertPolicy(qtw.QComboBox.NoInsert) does not work
     cmpNaVo=[]
     for pkPers,naVo in itemsNaVo:
       cmpNaVo.append(naVo)
       cb.addItem(naVo,pkPers)
     cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
-    #cb.model()
-    #cb.view()
 
     cpl=qtw.QCompleter(cmpNaVo)
     #cpl=qtw.QCompleter(cb.model())
     cb.setCompleter(cpl)
+    #cb.setValidator(WndSqlBase.Validator(self))
     cb.currentIndexChanged.connect(self.OnCbSelChanged)
 
     loF.addRow('Suche',cb)
@@ -629,9 +680,9 @@ class WndPerson(qtw.QWidget):
                  'fstName','phone','phone1','phone2','dtBirth','eMail','eMail1','eMail2','ahvNr',
                  ('comment',qtw.QTextEdit) ):
       if type(desc)==str:
-        w=SqlWidget(desc);txt=desc
+        w=self.SqlWidget(desc);txt=desc
       else:
-        w=SqlWidget(*desc);txt=desc[0]
+        w=self.SqlWidget(*desc);txt=desc[0]
       fldLst.append(w)
       loF.addRow(txt,w)
 
@@ -645,6 +696,10 @@ class WndPerson(qtw.QWidget):
     cb=self.cbNaVo
     curData=cb.currentData()
     #print("OnCbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
+    print('OnCbSelChanged',i,curData,cb.currentIndex())
+    if not self.SwitchRecord():
+      cb.setCurrentText('')
+      return
     if cb.currentData() is None:
       print("TODO:New Person inserted")
       cb.removeItem(i)
@@ -658,6 +713,7 @@ class WndPerson(qtw.QWidget):
         else:
           d=str(d)
         w.setText(d)
+      self.txtChanged=False
 
   def OnRptTreatmentProgress(self):
     print('OnRptTreatmentProgress')
@@ -693,26 +749,25 @@ class WndPerson(qtw.QWidget):
   def OnSave(self):
     for w in self.fldLst:
       fld=w.windowTitle()
-      if fld!='id': continue
-      id=w.text()
-    if id=='':
-      SqlInsert(self.fldLst,'Person')
+      if fld=='id': break
+    if w.text()=='':
+      newId=SqlInsert(self.fldLst,'Person')
+      w.setText(str(newId)) #TODO add entry to combobox
     else:
       SqlUpdate(self.fldLst,'Person')
+    self.txtChanged=False
 
   def OnNew(self):
+    if not self.SwitchRecord(): return
     self.cbNaVo.setCurrentIndex(-1)
     for w in self.fldLst:
       w.setText('')
 
 
-
-class WndTreatment(qtw.QWidget):
+class WndTreatment(WndSqlBase):
   def __init__(self,sqlFilter=None,title='WndTreatment',fkPerson=None,geometry=(100,100,800,500)):
-    super(WndTreatment,self).__init__()
-    self.setGeometry(*geometry)
+    super(WndTreatment,self).__init__(title,geometry)
     self.sqlFilter=sqlFilter
-    self.setWindowTitle(title)
 
     #https://doc-snapshots.qt.io/qt5-5.15/qformlayout.html
     loV=qtw.QVBoxLayout(self)
@@ -746,13 +801,13 @@ class WndTreatment(qtw.QWidget):
 
 
     for txt in ('id','fkInvoice','fkPerson','dtTreatment','duration','costPerHour','comment','tarZif'):
-      w=SqlWidget(txt)
+      w=self.SqlWidget(txt)
       if fkPerson is not None and txt=='fkPerson': w.setText(str(fkPerson))
       fldLst.append(w)
       loF.addRow(txt,w)
 
     txt='document'
-    w=SqlWidget(txt,qtw.QTextEdit)
+    w=self.SqlWidget(txt,qtw.QTextEdit)
     w.setMinimumWidth(1000) #TODO...
     w.setMaximumHeight(400) #TODO...
 
@@ -769,7 +824,10 @@ class WndTreatment(qtw.QWidget):
   def OnCbSelChanged(self,i):
     cb=self.cbTrt
     curData=cb.currentData()
-    #print("OnCbSelChanged index",i,"selection changed ",cb.currentIndex(),str(curData),cb.currentText())
+    print('OnCbSelChanged',i,curData,cb.currentIndex())
+    if not self.SwitchRecord():
+      cb.setCurrentText('')
+      return
     if cb.currentData() is None:
       print("TODO:New Person inserted")
       cb.removeItem(i)
@@ -783,6 +841,7 @@ class WndTreatment(qtw.QWidget):
         else:
           d=str(d)
         w.setText(d)
+      self.txtChanged=False
 
   def OnWndTreatment(self):
     cb=self.cbTrt
@@ -794,15 +853,17 @@ class WndTreatment(qtw.QWidget):
   def OnSave(self):
     for w in self.fldLst:
       fld=w.windowTitle()
-      if fld!='id': continue
-      id=w.text()
-    if id=='':
-      SqlInsert(self.fldLst,'Treatment')
+      if fld=='id': break
+    if w.text()=='':
+      newId=SqlInsert(self.fldLst,'Treatment')
+      w.setText(str(newId)) #TODO add entry to combobox
     else:
       SqlUpdate(self.fldLst,'Treatment')
+    self.txtChanged=False
 
 
   def OnNew(self):
+    if not self.SwitchRecord(): return
     self.cbTrt.setCurrentIndex(-1)
     for w in self.fldLst:
       if w.windowTitle()=='fkPerson':
@@ -810,12 +871,11 @@ class WndTreatment(qtw.QWidget):
       else:
         w.setText('')
 
-class WndInvoice(qtw.QWidget):
+
+class WndInvoice(WndSqlBase):
   def __init__(self,sqlFilter=None,title='WndInvoice',fkPerson=None,geometry=(100,100,800,500)):
-    super(WndInvoice,self).__init__()
-    self.setGeometry(*geometry)
+    super(WndInvoice,self).__init__(title,geometry)
     self.sqlFilter=sqlFilter
-    self.setWindowTitle(title)
 
     #https://doc-snapshots.qt.io/qt5-5.15/qformlayout.html
     loV=qtw.QVBoxLayout(self)
@@ -853,13 +913,13 @@ class WndInvoice(qtw.QWidget):
     self.fldLst=fldLst=list()
 
     for txt in ('id','fkPerson','fkAccount','tplInvoice','dtInvoice'):
-      w=SqlWidget(txt)
+      w=self.SqlWidget(txt)
       if fkPerson is not None and txt=='fkPerson': w.setText(str(fkPerson))
       fldLst.append(w)
       loF.addRow(txt,w)
 
     txt='comment'
-    w=SqlWidget(txt,qtw.QTextEdit)
+    w=self.SqlWidget(txt,qtw.QTextEdit)
     w.setMinimumWidth(200)
     w.setMinimumHeight(40)
     fldLst.append(w)
@@ -904,8 +964,10 @@ class WndInvoice(qtw.QWidget):
 
   def OnCbSelChanged(self,i):
     cb=self.cbIvc
+    if not self.SwitchRecord():
+      cb.setCurrentText('')
+      return
     pkInvoice=cb.currentData()
-    #print("OnCbSelChanged index",i,"selection changed ",cb.currentIndex(),str(pkInvoice),cb.currentText())
     if pkInvoice is None: return
     dbc=self.dbc
     d=dbc.execute('SELECT * FROM Invoice WHERE id=%d'%pkInvoice).fetchone()
@@ -916,6 +978,7 @@ class WndInvoice(qtw.QWidget):
       else:
         d=str(d)
       w.setText(d)
+    self.txtChanged=False
     sqlData=dbc.execute('SELECT id,dtTreatment,duration,comment,costPerHour FROM Treatment WHERE fkInvoice=%d ORDER BY dtTreatment;'%pkInvoice).fetchall()
     tbTrt=self.tbTreatment
     tbTrt.clearContents()
@@ -942,14 +1005,16 @@ class WndInvoice(qtw.QWidget):
   def OnSave(self):
     for w in self.fldLst:
       fld=w.windowTitle()
-      if fld!='id': continue
-      id=w.text()
-    if id=='':
-      SqlInsert(self.fldLst,'Invoice')
+      if fld=='id': break
+    if w.text()=='':
+      newId=SqlInsert(self.fldLst,'Invoice')
+      w.setText(str(newId)) #TODO add entry to combobox
     else:
       SqlUpdate(self.fldLst,'Invoice')
+    self.txtChanged=False
 
   def OnNew(self):
+    if not self.SwitchRecord(): return
     self.cbIvc.setCurrentIndex(-1)
     for w in self.fldLst:
       if w.windowTitle()=='fkPerson':
