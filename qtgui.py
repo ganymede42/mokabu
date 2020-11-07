@@ -814,12 +814,15 @@ class WndTreatment(WndSqlBase):
     fldLst.append(w)
     loF.addRow(txt,w)
 
+    ck=qtw.QCheckBox("no invoice",self)
+    #ck.stateChanged.connect(self.OnCkInvoice)
+    ck.stateChanged.connect(lambda:self.OnCkInvoice(ck))
+    loH.addWidget(ck)
     for txt,func in (("Ext. Edit",self.OnWndTreatment),("New",self.OnNew),("Save",self.OnSave)):#("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
       btn=qtw.QPushButton(txt,self)
       if func is not None:
         btn.clicked.connect(func)
       loH.addWidget(btn)
-
 
   def OnCbSelChanged(self,i):
     cb=self.cbTrt
@@ -842,6 +845,9 @@ class WndTreatment(WndSqlBase):
           d=str(d)
         w.setText(d)
       self.txtChanged=False
+
+  def OnCkInvoice(self,ck):
+    print('OnCkInvoice',ck,ck.isChecked())
 
   def OnWndTreatment(self):
     cb=self.cbTrt
