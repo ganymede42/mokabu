@@ -1034,7 +1034,7 @@ class WndMain(qtw.QMainWindow):
 
   def __init__(self):
     super(WndMain,self).__init__()
-    self.setGeometry(150,150,1300,900)
+    self.setGeometry(50,50,1100,800)
     self.setWindowTitle("MoKaBu")
     self.setWindowIcon(qtg.QIcon('logo_monika.ico'))
     #self.setWindowIcon(qtw.QIcon('pythonlogo.png'))

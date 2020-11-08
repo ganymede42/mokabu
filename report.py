@@ -29,6 +29,54 @@ class HeaderFooter(rlp.flowables.Flowable):
   def draw(self):
     pass
 
+class Couvert():
+  def __init__(self,fn='couvert.pdf'):
+    #dimension by default 1/72 inch
+    self.canvas=canvas=rlpg.canvas.Canvas(fn,pagesize=(rlps.A4[1],rlps.A4[0]))
+    self.styles=styles=rls.getSampleStyleSheet()
+    styles.add(rls.ParagraphStyle(name='Justify', alignment=rle.TA_JUSTIFY))
+    styles.add(rls.ParagraphStyle(name='Right', alignment=rle.TA_RIGHT))
+    styles.add(rls.ParagraphStyle(name='Center', alignment=rle.TA_CENTER))
+
+    styN=styles['Normal']
+    styR=styles['Right']
+    styC=styles["Center"]
+    styJ=styles["Justify"]
+    sz=rlps.A4
+    brd=(1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm)#l,r,t,b
+    l=brd[0];r=sz[0]-brd[1];t=sz[1]-brd[2];b=brd[3]
+    canvas.setLineWidth(.3)
+    #canvas.line(l,t,r,t)
+    #canvas.line(l,b,r,b)
+    brd=(1.4*rlu.cm,1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm)#l,r,t,b
+
+    # frm=rlp.Frame(brd[0],brd[3],sz[0]-brd[0]-brd[1],sz[1]-brd[2]-brd[3],showBoundary=1)
+    x1=5*rlu.cm; y1=3*rlu.cm; w1=7*rlu.cm; h1=4*rlu.cm
+    y1=rlps.A4[0]-y1-h1
+    frm=rlp.Frame(x1,y1,w1,h1,showBoundary=0)
+
+    #im=rlp.Image("Logo_Monika_s.png",7*rlu.cm,2*rlu.cm)
+    x=x1+w1; y=y1; w=7*rlu.cm; h=2*rlu.cm
+    y=y1+1.5*rlu.cm
+    canvas.drawImage("Logo_Monika_s.png",x,y,w,h)
+    story=[]
+    #im=rlp.Image("Logo_Monika_s.png",7*rlu.cm,2*rlu.cm)
+    #im.hAlign='RIGHT'
+    #story.append(im)
+    #story.append(rlp.Spacer(1,12))
+    txt='''<font size="8"><b>Monika Kast Perry</b><br/>
+    Dr. phil., Fachpsychologin<br/>
+    für Kinder- & Jugendpsychologie FSP<br/>
+    eidg. anerkannte Psychotherapeutin.<br/>
+    Albisstrasse 11 · 8038 Zürich · +41 76 335 72 79<br/></font>
+    <font size="8">monika.kast-perry@psychologie.ch<br/>
+    praxis-weiterkommen.com</font>'''
+    story.append(rlp.Paragraph(txt,styR))
+    frm.addFromList(story,canvas)
+    canvas.showPage()
+    canvas.save()
+
+
 class Invoice():
 
   def __init__(self,fn='invoice.pdf'):
@@ -86,7 +134,7 @@ class Invoice():
     Albisstrasse 11 · 8038 Zürich · +41 76 335 72 79<br/>
     monika.kast-perry@psychologie.ch · praxis-weiterkommen.com</font>'''
     story.append(rlp.Paragraph(txt,styR))
-
+    story.append(rlp.Spacer(1,-24))
     txt='''
     %s<br/>
     %s %s<br/>'''%klient[0:3]
@@ -95,11 +143,9 @@ class Invoice():
       if adr: # not None and not empty
         txt+=adr+'<br/>'
     txt+='%s %s<br/>'''%klient[6:8]
-
-    story.append(rlp.Spacer(1,36))
     story.append(rlp.Paragraph(txt,styN))
+    story.append(rlp.Spacer(1,24+24))
     txt='Zürich, %s'%dateconvert(datRng)
-    story.append(rlp.Spacer(1,24))
     story.append(rlp.Paragraph(txt,styN))
     story.append(rlp.Spacer(1,12))
 
@@ -576,6 +622,9 @@ if __name__ == '__main__':
   if args.mode&4:
     testBarcode()
     #default_app_open(fn%idx);idx+=1
+  if args.mode&8:
+    Couvert(fn%idx)
+    default_app_open(fn%idx);idx+=1
 
 
 
