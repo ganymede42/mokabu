@@ -8,6 +8,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtSql as qtdb
 import mokabu
+import report
 import wordprocessor as wp
 
 
@@ -164,7 +165,32 @@ def MsgBox(msg,title="MessageBox",msgInfo=None,detail=None,btn=qtw.QMessageBox.O
   if defBtn is not None: dlg.setDefaultButton(defBtn)
   return dlg.exec_()
 
+class QDateEdit(qtw.QLineEdit):
+  """docstring for QDateEdit"""
+  def __init__(self):
+    super(QDateEdit, self).__init__()
 
+  def setText(self,txt):
+    if txt not in (None,''):
+      txt=time.strftime('%d.%m.%y',time.strptime(txt,'%Y-%m-%d'))
+    qtw.QLineEdit.setText(self,txt)
+
+  def text(self):
+    txt=qtw.QLineEdit.text(self)
+    if txt in (None,''): return txt
+    for fmt in ("%d.%m.%y","%d.%m.%Y",'%Y-%m-%d'):
+      try:
+        dateStruct=time.strptime(txt,fmt)
+      except ValueError:
+        continue
+      break
+    try:
+      #dateEpoch=int(time.mktime(dateStruct)) # conver struct to second since 1.1.1970
+      txt=time.strftime('%Y-%m-%d',dateStruct)
+      #dateEpoch=int(time.strftime('%Y%m%d',dateStruct))
+    except UnboundLocalError as e:
+      raise UserWarning(str(txt))
+    return txt
 
 class WndSqlBase(qtw.QWidget):
   def __init__(self,title,geometry=(100,100,400,500)):
@@ -192,6 +218,9 @@ class WndSqlBase(qtw.QWidget):
         qWndType=qtw.QLabel
       else:
         qWndType=qtw.QLineEdit
+      if txt.startswith('dt'):
+        qWndType=QDateEdit
+
     w=qWndType()
     if  qWndType!=qtw.QLabel:
       w.textChanged.connect(self.OnTxtChanged)
@@ -207,6 +236,7 @@ class WndSqlBase(qtw.QWidget):
 
   def OnTxtChanged(self):
     self.txtChanged=True
+    #print('OnTxtChanged',self)
 
   def SwitchRecord(self):
     #when close or change to new record ask to save
@@ -775,7 +805,6 @@ class WndTreatment(WndSqlBase):
     loF=qtw.QFormLayout()
 
     loV.addLayout(loF)
-    loV.addLayout(loH)
     self.cbTrt=cb=qtw.QComboBox()
 
     app=qtw.QApplication.instance()
@@ -788,6 +817,8 @@ class WndTreatment(WndSqlBase):
     cb.setEditable(True)
     cmpTrt=[]
     for pkTrt,datTrt,comment in itemsTrt:
+      datTrt=time.strftime('%d.%m.%y',time.strptime(datTrt,'%Y-%m-%d'))
+
       cmpTrt.append(datTrt)
       cb.addItem(datTrt+' '+str(comment),pkTrt)
     cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
@@ -812,12 +843,19 @@ class WndTreatment(WndSqlBase):
     w.setMaximumHeight(400) #TODO...
 
     fldLst.append(w)
-    loF.addRow(txt,w)
+    #loF.addRow(txt,w)
+    loV.addWidget(w)
+    loV.addLayout(loH)
 
-    ck=qtw.QCheckBox("no invoice",self)
+    #ck=qtw.QCheckBox("no invoice",self)
     #ck.stateChanged.connect(self.OnCkInvoice)
-    ck.stateChanged.connect(lambda:self.OnCkInvoice(ck))
-    loH.addWidget(ck)
+    #ck.stateChanged.connect(lambda:self.OnCkInvoice(ck))
+    #loH.addWidget(ck)
+
+    self.cbIvc=cbIvc=qtw.QComboBox()
+    self.CbIvcFill(fkPerson)
+    loH.addWidget(cbIvc)
+
     for txt,func in (("Ext. Edit",self.OnWndTreatment),("New",self.OnNew),("Save",self.OnSave)):#("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
       btn=qtw.QPushButton(txt,self)
       if func is not None:
@@ -836,15 +874,33 @@ class WndTreatment(WndSqlBase):
       cb.removeItem(i)
     else:
       dbc=self.dbc
-      d=dbc.execute('SELECT * FROM Treatment WHERE id=%d'%curData).fetchone()
+      row=dbc.execute('SELECT * FROM Treatment WHERE id=%d'%curData).fetchone()
       #print(d)
-      for w,d in zip(self.fldLst,d):
+      for w,d in zip(self.fldLst,row):
         if d is None:
           d=''
         else:
           d=str(d)
         w.setText(d)
       self.txtChanged=False
+
+  def CbIvcFill(self,pkPerson):
+      cbIvc=self.cbIvc
+      dbc=self.dbc
+      cbIvc.clear()
+      itemsIvc=dbc.execute('SELECT id, dtInvoice FROM Invoice WHERE fkPerson=%s ORDER BY dtInvoice'%pkPerson).fetchall()
+      cbIvc.addItem('_not set_',None)
+      cbIvc.addItem('_no invoice_',None)
+
+      for pkIvc,datIvc in itemsIvc:
+        #cmpIvc.append(datTrt)
+        cbIvc.addItem(datIvc,pkIvc)
+        #if pkIvc==fkInvoice
+
+      self.txtChanged=False
+
+
+
 
   def OnCkInvoice(self,ck):
     print('OnCkInvoice',ck,ck.isChecked())
@@ -873,7 +929,17 @@ class WndTreatment(WndSqlBase):
     self.cbTrt.setCurrentIndex(-1)
     for w in self.fldLst:
       if w.windowTitle()=='fkPerson':
+        fkPerson=int(w.text())
         continue
+      elif w.windowTitle()=='costPerHour':
+        w.setText('180')
+      elif w.windowTitle()=='duration':
+        w.setText('60')
+      elif w.windowTitle()=='dtTreatment':
+        qtw.QLineEdit.setText(w,(time.strftime('%d.%m.%y',time.gmtime())))
+      elif w.windowTitle()=='comment':
+        row=self.dbc.execute('SELECT fstName FROM Person WHERE id=%d'%fkPerson).fetchone()
+        w.setText('Therapie mit %s'%row[0])
       else:
         w.setText('')
 
@@ -903,6 +969,7 @@ class WndInvoice(WndSqlBase):
     cb.setEditable(True)
     cmpRng=[]
     for pkRng, datRng in itemsRng:
+      datRng=time.strftime('%d.%m.%y',time.strptime(datRng,'%Y-%m-%d'))
       cmpRng.append(datRng)
       cb.addItem(datRng,pkRng)
     cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
@@ -954,9 +1021,9 @@ class WndInvoice(WndSqlBase):
       loH.addWidget(btn)
 
   def OnTbTrtDblClick(self,row,col):
-    trtId=self.lstTrtId[row]
-    print('Open treatment',trtId)
-    wnd=WndTreatment('WHERE id=%d'%trtId,'WndTreatment: trtId==%d'%trtId)
+    trtKey=self.lstTrtKey[row]
+    print('Open treatment',trtKey)
+    wnd=WndTreatment('WHERE id=%d'%trtKey[0],'WndTreatment: trtId==%d'%trtKey[0],trtKey[1])
     idx=0
     wnd.cbTrt.setCurrentIndex(idx)
     wnd.OnCbSelChanged(idx)#go to first invoice
@@ -985,16 +1052,18 @@ class WndInvoice(WndSqlBase):
         d=str(d)
       w.setText(d)
     self.txtChanged=False
-    sqlData=dbc.execute('SELECT id,dtTreatment,duration,comment,costPerHour FROM Treatment WHERE fkInvoice=%d ORDER BY dtTreatment;'%pkInvoice).fetchall()
+    sqlData=dbc.execute('SELECT id,fkPerson,dtTreatment,duration,comment,costPerHour FROM Treatment WHERE fkInvoice=%d ORDER BY dtTreatment;'%pkInvoice).fetchall()
     tbTrt=self.tbTreatment
     tbTrt.clearContents()
     tbTrt.setRowCount(len(sqlData))
-    self.lstTrtId=lstTrtId=list()
+    self.lstTrtKey=lstTrtKey=list()
 
     for ir,row in enumerate(sqlData):
-      id=row[0];lstTrtId.append(id)
-      for ic,data in enumerate(row[1:]):
-        tw=qtw.QTableWidgetItem(str(data))
+      key=row[0:2];lstTrtKey.append(key)
+      for ic,data in enumerate(row[2:]):
+        if ic==0: data=time.strftime('%d.%m.%y',time.strptime(data,'%Y-%m-%d'))
+        else:     data=str(data)
+        tw=qtw.QTableWidgetItem(data)
         tw.setFlags(qtc.Qt.ItemIsEnabled|qtc.Qt.ItemIsSelectable)
         if ic!=2: tw.setTextAlignment(qtc.Qt.AlignCenter)
         #tw=qtw.QTableWidgetItem(str(data),type=int)
@@ -1062,6 +1131,8 @@ class WndMain(qtw.QMainWindow):
     mnRpt=mainMenu.addMenu('&Report')
     act=AddMenuAction(self,mnRpt,"Invoices",self.OnRepInvoices)
     act=AddMenuAction(self,mnRpt,"Therapy Progress",self.OnRepTherapyProgress)
+    act=AddMenuAction(self,mnRpt,"Couvert",self.OnCouvert)
+
 
   def closeEvent(self, event):
     print('closeEvent')
@@ -1160,6 +1231,11 @@ class WndMain(qtw.QMainWindow):
     print("OnRepTherapyProgress")
     app=qtw.QApplication.instance()
     app.mkb.report_therapy_progress()
+
+  def OnCouvert(self):
+    print("OnCouvert")
+    report.Couvert('Couvert.pdf')
+    report.default_app_open('Couvert.pdf')
 
 
 #https://doc.qt.io/qtforpython/PySide2/QtSql/QSqlRelationalTableModel.html
