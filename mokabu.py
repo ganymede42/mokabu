@@ -105,7 +105,6 @@ class MoKaBu:
     report.default_app_open(fn);
 
   def sync_invoice(self,fn='Kontoauszug_2020_10_09.csv'):
-    fn='Kontoauszug_04.11.2020 09_27_32.csv'
     import csv,re,time
     db=self.db
     dbc=self.dbc
@@ -168,7 +167,7 @@ if __name__=='__main__':
   if args.mode&2:
     mkb.report_therapy_progress();exit(0)
   if args.mode&4:
-    mkb.sync_invoice();exit(0)
+    mkb.sync_invoice('Kontoauszug_15.11.2020 11_07_49.csv');exit(0)
 
 
   import qtgui

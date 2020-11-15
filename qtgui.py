@@ -172,7 +172,10 @@ class QDateEdit(qtw.QLineEdit):
 
   def setText(self,txt):
     if txt not in (None,''):
-      txt=time.strftime('%d.%m.%y',time.strptime(txt,'%Y-%m-%d'))
+      try:
+        txt=time.strftime('%d.%m.%y',time.strptime(txt,'%Y-%m-%d'))
+      except ValueError as e:
+        print('QDateEdit::setText',e)
     qtw.QLineEdit.setText(self,txt)
 
   def text(self):
@@ -817,7 +820,10 @@ class WndTreatment(WndSqlBase):
     cb.setEditable(True)
     cmpTrt=[]
     for pkTrt,datTrt,comment in itemsTrt:
-      datTrt=time.strftime('%d.%m.%y',time.strptime(datTrt,'%Y-%m-%d'))
+      try:
+        datTrt=time.strftime('%d.%m.%y',time.strptime(datTrt,'%Y-%m-%d'))
+      except ValueError as e:
+        print('WndTreatment::__init__',e,datTrt)
 
       cmpTrt.append(datTrt)
       cb.addItem(datTrt+' '+str(comment),pkTrt)
@@ -1103,7 +1109,7 @@ class WndMain(qtw.QMainWindow):
 
   def __init__(self):
     super(WndMain,self).__init__()
-    self.setGeometry(50,50,1100,800)
+    self.setGeometry(50,50,1300,800)
     self.setWindowTitle("MoKaBu")
     self.setWindowIcon(qtg.QIcon('logo_monika.ico'))
     #self.setWindowIcon(qtw.QIcon('pythonlogo.png'))
