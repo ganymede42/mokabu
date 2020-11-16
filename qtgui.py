@@ -10,6 +10,15 @@ import PyQt5.QtSql as qtdb
 import mokabu
 import report
 import wordprocessor as wp
+import traceback
+
+
+def excepthook(exc_type,exc_value,exc_tb):
+  tb="".join(traceback.format_exception(exc_type,exc_value,exc_tb))
+  print("error catched!:")
+  print("error message:\n",tb)
+  msg=exc_type.__name__+': '+str(exc_value)
+  MsgBox(msg,title="Not handeled Error"+' '*100,msgInfo=None,detail=tb,btn=qtw.QMessageBox.Ok,icon=qtw.QMessageBox.Critical)
 
 
 def MainApp(mkb,dbg):
@@ -43,6 +52,7 @@ def MainApp(mkb,dbg):
   #WndChildAdd(wpWnd)
   #app.topLevelWindows()
   #app.topLevelWidgets()
+  sys.excepthook=excepthook
   sys.exit(app.exec_())
 
 def testPerson(mainWnd,idx=39):
@@ -198,6 +208,7 @@ class QDateEdit(qtw.QLineEdit):
 class WndSqlBase(qtw.QWidget):
   def __init__(self,title,geometry=(100,100,400,500)):
     super(WndSqlBase,self).__init__()
+    self.setWindowTitle(title)
     self.txtChanged=False
 
   class Validator(qtg.QValidator):
@@ -762,7 +773,7 @@ class WndPerson(WndSqlBase):
     wnd.cbTrt.setCurrentIndex(wnd.cbTrt.count()-1)
     sub=qtw.QMdiSubWindow()
     sub.setWidget(wnd)
-    #sub.setWindowTitle("subwindow"+str(MainWindow.count))
+    #sub.setWindowTitle(wnd.windowTitle())
     self.parent().parent().parent().parent().mdi.addSubWindow(sub)
     sub.show()
 
@@ -862,7 +873,7 @@ class WndTreatment(WndSqlBase):
     self.CbIvcFill(fkPerson)
     loH.addWidget(cbIvc)
 
-    for txt,func in (("Ext. Edit",self.OnWndTreatment),("New",self.OnNew),("Save",self.OnSave)):#("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
+    for txt,func in (("Ext. Edit",self.OnWndTreatment),("Delete",self.OnDelete),("New",self.OnNew),("Save",self.OnSave)):#("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
       btn=qtw.QPushButton(txt,self)
       if func is not None:
         btn.clicked.connect(func)
@@ -905,9 +916,6 @@ class WndTreatment(WndSqlBase):
 
       self.txtChanged=False
 
-
-
-
   def OnCkInvoice(self,ck):
     print('OnCkInvoice',ck,ck.isChecked())
 
@@ -929,6 +937,9 @@ class WndTreatment(WndSqlBase):
       SqlUpdate(self.fldLst,'Treatment')
     self.txtChanged=False
 
+  def OnDelete(self):
+    #TODO
+    MsgBox('NOT YET IMPLEMENTED')
 
   def OnNew(self):
     if not self.SwitchRecord(): return
@@ -1020,7 +1031,7 @@ class WndInvoice(WndSqlBase):
     tbTrt.setMinimumWidth(500)
     loF.addRow('Treatments',tbTrt)
 
-    for txt,func in (("Report Invoice",self.OnRptInvoice),("New",self.OnNew),("Save",self.OnSave)):
+    for txt,func in (("Report Invoice",self.OnRptInvoice),("Delete",self.OnDelete),("New",self.OnNew),("Save",self.OnSave)):
       btn=qtw.QPushButton(txt,self)
       if func is not None:
         btn.clicked.connect(func)
@@ -1094,6 +1105,10 @@ class WndInvoice(WndSqlBase):
       SqlUpdate(self.fldLst,'Invoice')
     self.txtChanged=False
 
+  def OnDelete(self):
+    #TODO
+    MsgBox('NOT YET IMPLEMENTED')
+
   def OnNew(self):
     if not self.SwitchRecord(): return
     self.cbIvc.setCurrentIndex(-1)
@@ -1130,6 +1145,7 @@ class WndMain(qtw.QMainWindow):
     act=AddMenuAction(self,mnEdit,"Table Account",self.OnTblAccount,shortcut="Ctrl+Shift+F")
     act=AddMenuAction(self,mnEdit,"Person",self.OnWndPerson,shortcut="Ctrl+A")
     act=AddMenuAction(self,mnEdit,"New Assisted Invoices",self.OnWndNewInvoices)
+    act=AddMenuAction(self,mnEdit,"Import Account CSV",self.OnImportCSV,shortcut="Ctrl+Q")
     act=AddMenuAction(self,mnEdit,"Sync Invoice->Account",self.OnWndSyncIvcAcc)
     act=AddMenuAction(self,mnEdit,"OnQryTreatment",self.OnQryTreatment)
     act=AddMenuAction(self,mnEdit,"OnQryInvoice",self.OnQryInvoice)
@@ -1202,6 +1218,21 @@ class WndMain(qtw.QMainWindow):
     #sub.setWindowTitle("subwindow"+str(MainWindow.count))
     self.mdi.addSubWindow(sub)
     sub.show()
+
+
+  def OnImportCSV(self):
+    print("OnImportCSV")
+    #https://doc.qt.io/qt-5/qfiledialog.html#Option-enum
+    (fname,filter)=qtw.QFileDialog.getOpenFileName(self,'Open file','/home/zamofing_t/Documents/prj/Mokabu','CSV files (*.csv);;TXT files (*.txt)',
+    options=qtw.QFileDialog.Option.DontUseNativeDialog |
+    qtw.QFileDialog.Option.DontResolveSymlinks |
+    qtw.QFileDialog.Option.DontUseSheet |
+    qtw.QFileDialog.Option.DontUseCustomDirectoryIcons)
+    print(fname)
+    if fname:
+      app=qtw.QApplication.instance()
+      app.mkb.sync_invoice(fname)
+      MsgBox('CSV Import done')
 
   def OnWndSyncIvcAcc(self):
     print("OnWndSyncIvcAcc")
