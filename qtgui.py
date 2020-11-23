@@ -209,7 +209,7 @@ class WndSqlBase(qtw.QWidget):
   def __init__(self,title,geometry=(100,100,400,500)):
     super(WndSqlBase,self).__init__()
     self.setWindowTitle(title)
-    self.txtChanged=False
+    self._changed=False
 
   class Validator(qtg.QValidator):
     'Validator for wndSqlBase Combobox class tht changes to a new record'
@@ -249,13 +249,13 @@ class WndSqlBase(qtw.QWidget):
         event.ignore()
 
   def OnTxtChanged(self):
-    self.txtChanged=True
-    #print('OnTxtChanged',self)
+    self.SetChanged(True)
+    print('OnTxtChanged',self)
 
   def SwitchRecord(self):
     #when close or change to new record ask to save
-    print('SwitchRecord',self.txtChanged)
-    if self.txtChanged is False: return True
+    print('SwitchRecord',self._changed)
+    if self._changed is False: return True
     res=MsgBox('save changes to actual record?',
                btn=qtw.QMessageBox.Yes|qtw.QMessageBox.No|qtw.QMessageBox.Cancel,
                icon=qtw.QMessageBox.Question)
@@ -263,10 +263,22 @@ class WndSqlBase(qtw.QWidget):
     if res==qtw.QMessageBox.Yes:
       self.OnSave()
     elif res==qtw.QMessageBox.No:
-      self.txtChanged=False
+      self.SetChanged(False)
     elif res==qtw.QMessageBox.Cancel:
       return False
     return True
+
+  def SetChanged(self,chg):
+    assert(type(chg)==bool)
+    if self._changed!=chg:
+      self._changed=chg
+      title=self.windowTitle()
+      print(title)
+      if chg:
+        self.setWindowTitle(title+'*')
+      else:
+        self.setWindowTitle(title[:-1])
+
 
   def OnSave(self):
     raise BaseException('overload this function')
@@ -720,17 +732,36 @@ class WndPerson(WndSqlBase):
     loF.addRow('Suche',cb)
     self.fldLst=fldLst=list()
 
+    fld2lbl={
+      'ivcPrefix':'Anrede',
+      'ivcLstName':'Rng Vorname',
+      'ivcFstName':'Rng Name',
+      'ivcAddress':'Rng Adresse',
+      'ivcAddress1':'Rng Adresse1',
+      'ivcAddress2':'Rng Adresse2',
+      'zipCode':'PLZ',
+      'city':'Ort',
+      'lstName':'Patient Vorname',
+      'fstName':'Patient Name',
+      'phone': 'Telefon',
+      'phone1':'Telefon1',
+      'phone2':'Telefon2',
+      'dtBirth':'Geburtsdatum',
+      'ahvNr':'AHV-Nr.',
+      'comment':'Bemerkung'
+    }
     for desc in ('id','ivcPrefix','ivcLstName','ivcFstName','ivcAddress','ivcAddress1','ivcAddress2','zipCode','city','lstName',
                  'fstName','phone','phone1','phone2','dtBirth','eMail','eMail1','eMail2','ahvNr',
                  ('comment',qtw.QTextEdit) ):
       if type(desc)==str:
-        w=self.SqlWidget(desc);txt=desc
+        w=self.SqlWidget(desc);fld=desc
       else:
-        w=self.SqlWidget(*desc);txt=desc[0]
+        w=self.SqlWidget(*desc);fld=desc[0]
       fldLst.append(w)
-      loF.addRow(txt,w)
+      lbl=fld2lbl.get(fld,fld)
+      loF.addRow(lbl,w)
 
-    for txt,func in (("Treatment",self.OnWndTreatment),("Invoice",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress),("New",self.OnNew),("Save",self.OnSave)):
+    for txt,func in (("Treatment",self.OnWndTreatment),("Invoice",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress),("Delete",self.OnDelete),("New",self.OnNew),("Save",self.OnSave)):
       btn=qtw.QPushButton(txt,self)
       if func is not None:
         btn.clicked.connect(func)
@@ -757,7 +788,7 @@ class WndPerson(WndSqlBase):
         else:
           d=str(d)
         w.setText(d)
-      self.txtChanged=False
+      self.SetChanged(False)
 
   def OnRptTreatmentProgress(self):
     print('OnRptTreatmentProgress')
@@ -799,7 +830,12 @@ class WndPerson(WndSqlBase):
       w.setText(str(newId)) #TODO add entry to combobox
     else:
       SqlUpdate(self.fldLst,'Person')
-    self.txtChanged=False
+    self.SetChanged(False)
+
+  def OnDelete(self):
+    #TODO
+    MsgBox('NOT YET IMPLEMENTED')
+
 
   def OnNew(self):
     if not self.SwitchRecord(): return
@@ -899,7 +935,7 @@ class WndTreatment(WndSqlBase):
         else:
           d=str(d)
         w.setText(d)
-      self.txtChanged=False
+      self.SetChanged(False)
 
   def CbIvcFill(self,pkPerson):
       cbIvc=self.cbIvc
@@ -914,7 +950,7 @@ class WndTreatment(WndSqlBase):
         cbIvc.addItem(datIvc,pkIvc)
         #if pkIvc==fkInvoice
 
-      self.txtChanged=False
+      self.SetChanged(False)
 
   def OnCkInvoice(self,ck):
     print('OnCkInvoice',ck,ck.isChecked())
@@ -935,7 +971,7 @@ class WndTreatment(WndSqlBase):
       w.setText(str(newId)) #TODO add entry to combobox
     else:
       SqlUpdate(self.fldLst,'Treatment')
-    self.txtChanged=False
+    self.SetChanged(False)
 
   def OnDelete(self):
     #TODO
@@ -1052,6 +1088,12 @@ class WndInvoice(WndSqlBase):
     sub.show()
     return
 
+
+  def OnCbSelTrtCng(self,i):
+    cb=self.cbTrt
+    pkTreatment=cb.currentData()
+    print('TODO:add Treatment %d to this invoice'%pkTreatment)
+
   def OnCbSelChanged(self,i):
     cb=self.cbIvc
     if not self.SwitchRecord():
@@ -1068,11 +1110,12 @@ class WndInvoice(WndSqlBase):
       else:
         d=str(d)
       w.setText(d)
-    self.txtChanged=False
+    self.SetChanged(False)
     sqlData=dbc.execute('SELECT id,fkPerson,dtTreatment,duration,comment,costPerHour FROM Treatment WHERE fkInvoice=%d ORDER BY dtTreatment;'%pkInvoice).fetchall()
     tbTrt=self.tbTreatment
     tbTrt.clearContents()
-    tbTrt.setRowCount(len(sqlData))
+    rc=len(sqlData)
+    tbTrt.setRowCount(rc+1)
     self.lstTrtKey=lstTrtKey=list()
 
     for ir,row in enumerate(sqlData):
@@ -1086,6 +1129,20 @@ class WndInvoice(WndSqlBase):
         #tw=qtw.QTableWidgetItem(str(data),type=int)
         #qtc.Qt.ItemIsEnabled
         tbTrt.setItem(ir,ic,tw)
+
+
+    self.cbTrt=cb=qtw.QComboBox()
+    for w in self.fldLst:
+      if w.windowTitle()=='fkPerson':
+        fkPerson=int(w.text())
+        break
+    sqlData=dbc.execute('SELECT id,fkPerson,dtTreatment FROM Treatment WHERE fkInvoice is NULL AND fkPerson=%d ORDER BY dtTreatment;'%fkPerson).fetchall()
+    cb.addItem('',-1)
+    cb.currentIndexChanged.connect(self.OnCbSelTrtCng)
+    for row in sqlData:
+      cb.addItem(str(row),row[0])
+    #cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
+    tbTrt.setCellWidget(rc,0,cb)
     return
 
   def OnRptInvoice(self):
@@ -1103,7 +1160,7 @@ class WndInvoice(WndSqlBase):
       w.setText(str(newId)) #TODO add entry to combobox
     else:
       SqlUpdate(self.fldLst,'Invoice')
-    self.txtChanged=False
+    self.SetChanged(False)
 
   def OnDelete(self):
     #TODO
