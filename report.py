@@ -158,11 +158,20 @@ class Invoice():
 
     txt+='<br/><br/><b>%s %s'%(klient[8:10])
 
+    geb=klient[10]
+    ahvOrt=klient[11]
+    if ahvOrt:
+      ahvOrt=ahvOrt.split(maxsplit=1)
+      if len(ahvOrt)==1:
+        ahvOrt.append(None)
+      ahv,ort=ahvOrt
+    else:
+      ahv=ort=None
 
-    if tplIV:
-      txt+=', <Ort>'
-    if klient[10] is not None: txt+=', geb: %s'%dateconvert(klient[10])
-    if klient[11]  is not None: txt+=' AHV-Nr: %s'%klient[11]
+    if tplIV and ort:
+      txt+=', '+ort
+    if geb is not None: txt+=', geb: %s'%dateconvert(geb)
+    if ahv is not None: txt+=', AHV-Nr: %s'%ahv
     txt+='</b>'
     story.append(rlp.Paragraph(txt,styJ))
 
@@ -190,8 +199,8 @@ class Invoice():
 
       t=rlp.Table(data,colWidths=(60,40,60,200,50,50,))
       t.hAlign='LEFT'
-      t.setStyle(rlp.TableStyle([('INNERGRID',(0,0),(-1,-1),0.15,rll.colors.black),
-                                 ('BOX',(0,0),(-1,-1),0.15,rll.colors.black),
+      t.setStyle(rlp.TableStyle([#('INNERGRID',(0,0),(-1,-1),0.15,rll.colors.black),
+                                 #('BOX',(0,0),(-1,-1),0.15,rll.colors.black),
                                  ('ALIGN',(0,0),(0,-1),'RIGHT'),
                                  ('ALIGN',(1,0),(2,-1),'RIGHT'),
                                  ('ALIGN',(4,0),(4,-1),'CENTER'),
@@ -552,7 +561,7 @@ if __name__ == '__main__':
 
   def testInvoice(fn):
     lstKlient=\
-      (('Frau ', 'Saki', 'Karakurt', 'Meierwiesenstrasse 24', '', '', '8107', 'Buchs', 'Bayraktar', 'Aras', '2012-02-15', '765.234.433.454'),
+      (('Frau ', 'Saki', 'Karakurt', 'Meierwiesenstrasse 24', '', '', '8107', 'Buchs', 'Bayraktar', 'Aras', '2012-02-15', '765.234.433.454 Frick'),
        ('Familie', 'Preisig U. &', 'C.', 'Sihlaustr. 3', '', '', '8134', 'Adliswil', 'Radic Baumgartner', 'Ksenija', '1975-06-18', None),)
     lstTpl=\
       (None,0,1,2,4,8)

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 #https://www.tutorialspoint.com/pyqt/pyqt_hello_world.htm
 #https://github.com/tpgit/MDIImageViewer usefull sample application
-import sys,time
+import sys,time,os
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtCore as qtc
 import PyQt5.QtCore as qtc
@@ -724,7 +724,8 @@ class WndPerson(WndSqlBase):
     cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
 
     cpl=qtw.QCompleter(cmpNaVo)
-    #cpl=qtw.QCompleter(cb.model())
+    cpl.setCaseSensitivity(qtc.Qt.CaseInsensitive)
+    cpl.setFilterMode(qtc.Qt.MatchContains)
     cb.setCompleter(cpl)
     #cb.setValidator(WndSqlBase.Validator(self))
     cb.currentIndexChanged.connect(self.OnCbSelChanged)
@@ -876,6 +877,8 @@ class WndTreatment(WndSqlBase):
       cb.addItem(datTrt+' '+str(comment),pkTrt)
     cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
     cpl=qtw.QCompleter(cmpTrt)
+    cpl.setCaseSensitivity(qtc.Qt.CaseInsensitive)
+    cpl.setFilterMode(qtc.Qt.MatchContains)
     cb.setCompleter(cpl)
     cb.setMaxVisibleItems(20)
     cb.currentIndexChanged.connect(self.OnCbSelChanged)
@@ -996,6 +999,28 @@ class WndTreatment(WndSqlBase):
       else:
         w.setText('')
 
+class TblInvoice(qtw.QTableWidget):
+  def __init__(self,):
+    super(TblInvoice,self).__init__(1,4)#rows cols
+    self.setHorizontalHeaderLabels(('date','min','comment','Fr/h',))
+    hh=self.horizontalHeader()
+    hh.setMinimumSectionSize(20)
+    vh=self.verticalHeader()
+    vh.setDefaultSectionSize(20)
+    #qTbl.resizeColumnsToContents()
+    for i,w in enumerate((100,40,270,40)):
+      self.setColumnWidth(i,w)
+    #qTbl.setFixedWidth(400)
+    self.setMinimumWidth(500)
+
+  def contextMenuEvent(self, event):
+    ctxMn=qtw.QMenu(self)
+    actDel=ctxMn.addAction('remove from invoice')
+    action=ctxMn.exec_(self.mapToGlobal(event.pos()))
+
+    if action==actDel:
+      print('delete')
+
 
 class WndInvoice(WndSqlBase):
   def __init__(self,sqlFilter=None,title='WndInvoice',fkPerson=None,geometry=(100,100,800,500)):
@@ -1029,7 +1054,8 @@ class WndInvoice(WndSqlBase):
     #cb.model()
     #cb.view()
     cpl=qtw.QCompleter(cmpRng)
-    #cpl=qtw.QCompleter(cb.model())
+    cpl.setCaseSensitivity(qtc.Qt.CaseInsensitive)
+    cpl.setFilterMode(qtc.Qt.MatchContains)
     cb.setCompleter(cpl)
     cb.currentIndexChanged.connect(self.OnCbSelChanged)
 
@@ -1052,19 +1078,8 @@ class WndInvoice(WndSqlBase):
     loF.addRow(txt,w)
 
     #Adding sql table for treatments
-    self.tbTreatment=tbTrt=qtw.QTableWidget(1,4)#rows cols
+    self.tbTreatment=tbTrt=TblInvoice()
     tbTrt.cellDoubleClicked.connect(self.OnTbTrtDblClick)
-
-    tbTrt.setHorizontalHeaderLabels(('date','min','comment','Fr/h',))
-    hh=tbTrt.horizontalHeader()
-    hh.setMinimumSectionSize(20)
-    vh=tbTrt.verticalHeader()
-    vh.setDefaultSectionSize(20)
-    #qTbl.resizeColumnsToContents()
-    for i,w in enumerate((100,40,270,40)):
-      tbTrt.setColumnWidth(i,w)
-    #qTbl.setFixedWidth(400)
-    tbTrt.setMinimumWidth(500)
     loF.addRow('Treatments',tbTrt)
 
     for txt,func in (("Report Invoice",self.OnRptInvoice),("Delete",self.OnDelete),("New",self.OnNew),("Save",self.OnSave)):
@@ -1149,7 +1164,25 @@ class WndInvoice(WndSqlBase):
     print('OnRptInvoice')
     app=qtw.QApplication.instance()
     curData=self.cbIvc.currentData()
-    app.mkb.report_invoice('iv.id=%d'%curData)
+    dbc=self.dbc
+
+    sqlData=dbc.execute('SELECT fstName,lstName,dtInvoice,tplInvoice FROM Person ps LEFT JOIN Invoice iv ON ps.id=iv.fkPerson WHERE iv.id=%d'%curData).fetchone()
+    try:
+      os.mkdir('invoice')
+    except FileExistsError:
+      pass
+    try:
+      tpl='_%d'%int(sqlData[3])
+    except (ValueError,TypeError):
+      tpl=''
+    try:
+      dateStruct=time.strptime(sqlData[2],'%Y-%m-%d')
+      dtTxt=time.strftime('%y%m%d',dateStruct)
+    except (ValueError,TypeError) as e:
+      print('error in dateconvert:"%s"'%str(sqlData[2]),file=sys.stderr)
+      dtTxt='xx_xx_xx'
+    fn=os.path.join('invoice','Rng'+str(sqlData[1])+str(sqlData[0])+dtTxt+tpl+'.pdf')
+    app.mkb.report_invoice('iv.id=%d'%curData,fn=fn)
 
   def OnSave(self):
     for w in self.fldLst:
