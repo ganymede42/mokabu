@@ -24,7 +24,6 @@ Es ist ein 'Bitfeld und ist eine Summe folgender Zahlen:
  0: nichts spezielles
 +1: Zahlungserinnerung
 +2: 2. Mahnung
-+3: <nicht gebraucht>
 +4: Rechnung für IV
 +8: QR-Code
 
@@ -79,6 +78,13 @@ TODO:
 - logging von Datenbank Aktionen
 - Bessere GUI Darstellung und resizing Verhalten der Formulare
 ```
+
+Bugs:
+-----
+```
+Bein 'assisted invoice' wird die rechnung unter invoice.pdf gespeichert und nicht in invoice/ mit richtigem Namen.
+```
+
 
 DONE IN THIS COMMIT
 -----
