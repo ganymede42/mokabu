@@ -74,7 +74,6 @@ TODO:
 - Einfügen von Behandlungen in Rechnungen (nicht nur auto-assistant)
 - Tabelle der nicht verrechneten Behandlungen (Invoice mit id=-1)
 - Button (checkbox) um Behandlung zu 'nicht verrechnet' hinzufügn/entfernen
-- importieren neuer csv-Bankkonto-Files.
 - logging von Datenbank Aktionen
 - Bessere GUI Darstellung und resizing Verhalten der Formulare
 ```
@@ -82,14 +81,12 @@ TODO:
 Bugs:
 -----
 ```
-Bein 'assisted invoice' wird die rechnung unter invoice.pdf gespeichert und nicht in invoice/ mit richtigem Namen.
 ```
 
 
 DONE IN THIS COMMIT
 -----
 ```
-- Besseres Handling von <New>
-- Nachdem <New> gedrückt wurde nur 1x Save drücken! Anschliessend Fenster schliessen und neu öffnen.
-- Bei Änderungen <Save> drücken, damit nichts verloren geht. Es wird keine Überprüfung von Änderungen gemacht.
+- Bein 'assisted invoice' und einzelne Invoice Generierung wird die Rechnung unter invoice/Rng<NameVornameDatum>.pdf gespeichert.
+
 ```

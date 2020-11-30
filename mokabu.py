@@ -3,7 +3,7 @@
 
 #https://www.w3schools.com/sql/sql_join.asp
 import sqlite3 as lite
-import sys
+import sys,os,time
 import report
 
 class MoKaBu:
@@ -50,8 +50,29 @@ class MoKaBu:
     except lite.Error as e:
         print(schema+" Error %s:" % e.args[0])
 
-  def report_invoice(self, sqlFilt=None,fn='invoice.pdf'):
+  def report_invoice(self, sqlFilt=None,fn='invoice.pdf',pkInvoice=None):
+    #if pkInvoice is set, the filter and the filename is generated
     db=self.db
+    dbc=self.dbc
+    if pkInvoice:
+      sqlFilt='iv.id=%d'%pkInvoice
+      sqlData=dbc.execute('SELECT fstName,lstName,dtInvoice,tplInvoice FROM Person ps LEFT JOIN Invoice iv ON ps.id=iv.fkPerson WHERE iv.id=%d'%pkInvoice).fetchone()
+      try:
+        os.mkdir('invoice')
+      except FileExistsError:
+        pass
+      try:
+        tpl='_%d'%int(sqlData[3])
+      except (ValueError,TypeError):
+        tpl=''
+      try:
+        dateStruct=time.strptime(sqlData[2],'%Y-%m-%d')
+        dtTxt=time.strftime('%y%m%d',dateStruct)
+      except (ValueError,TypeError) as e:
+        print('error in dateconvert:"%s"'%str(sqlData[2]),file=sys.stderr)
+        dtTxt='xx_xx_xx'
+      fn=os.path.join('invoice','Rng'+str(sqlData[1])+str(sqlData[0])+dtTxt+tpl+'.pdf')
+
     dbcRng=self.dbc
     dbcBeh=db.cursor()
     sqlTplRng='''SELECT iv.id,tplInvoice,dtInvoice,ivcPrefix,ivcLstName,ivcFstName,ivcAddress,ivcAddress1,ivcAddress2,zipCode,city,lstName,fstName,dtBirth,ahvNr

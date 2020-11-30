@@ -436,7 +436,7 @@ class WndNewInvoices(qtw.QWidget):
     sqlStr='UPDATE Treatment SET fkInvoice=? WHERE fkInvoice IS NULL AND fkPerson=?'
     dbc.execute(sqlStr,(pkInvoice,fkPerson))
     db.commit()
-    app.mkb.report_invoice('iv.id=%d'%pkInvoice)
+    app.mkb.report_invoice(pkInvoice=pkInvoice)
     self.FillTreatment()
     return
 
@@ -1164,25 +1164,7 @@ class WndInvoice(WndSqlBase):
     print('OnRptInvoice')
     app=qtw.QApplication.instance()
     curData=self.cbIvc.currentData()
-    dbc=self.dbc
-
-    sqlData=dbc.execute('SELECT fstName,lstName,dtInvoice,tplInvoice FROM Person ps LEFT JOIN Invoice iv ON ps.id=iv.fkPerson WHERE iv.id=%d'%curData).fetchone()
-    try:
-      os.mkdir('invoice')
-    except FileExistsError:
-      pass
-    try:
-      tpl='_%d'%int(sqlData[3])
-    except (ValueError,TypeError):
-      tpl=''
-    try:
-      dateStruct=time.strptime(sqlData[2],'%Y-%m-%d')
-      dtTxt=time.strftime('%y%m%d',dateStruct)
-    except (ValueError,TypeError) as e:
-      print('error in dateconvert:"%s"'%str(sqlData[2]),file=sys.stderr)
-      dtTxt='xx_xx_xx'
-    fn=os.path.join('invoice','Rng'+str(sqlData[1])+str(sqlData[0])+dtTxt+tpl+'.pdf')
-    app.mkb.report_invoice('iv.id=%d'%curData,fn=fn)
+    app.mkb.report_invoice(pkInvoice=curData)
 
   def OnSave(self):
     for w in self.fldLst:
