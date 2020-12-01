@@ -57,8 +57,9 @@ class MoKaBu:
     if pkInvoice:
       sqlFilt='iv.id=%d'%pkInvoice
       sqlData=dbc.execute('SELECT fstName,lstName,dtInvoice,tplInvoice FROM Person ps LEFT JOIN Invoice iv ON ps.id=iv.fkPerson WHERE iv.id=%d'%pkInvoice).fetchone()
+      path='invoice'
       try:
-        os.mkdir('invoice')
+        os.mkdir(path)
       except FileExistsError:
         pass
       try:
@@ -71,7 +72,7 @@ class MoKaBu:
       except (ValueError,TypeError) as e:
         print('error in dateconvert:"%s"'%str(sqlData[2]),file=sys.stderr)
         dtTxt='xx_xx_xx'
-      fn=os.path.join('invoice','Rng'+str(sqlData[1])+str(sqlData[0])+dtTxt+tpl+'.pdf')
+      fn=os.path.join(path,'Rng'+str(sqlData[1])+str(sqlData[0])+dtTxt+tpl+'.pdf')
 
     dbcRng=self.dbc
     dbcBeh=db.cursor()
@@ -100,10 +101,21 @@ class MoKaBu:
     repIvc.publish()
     report.default_app_open(fn);
 
-  def report_therapy_progress(self, sqlFilt=None,fn='therapy_progress.pdf'):
+  def report_therapy_progress(self, sqlFilt=None,fn='therapy_progress.pdf',pkPerson=None):
     db=self.db
-    dbcRng=self.dbc
-    dbcBeh=db.cursor()
+
+    db=self.db
+    dbc=self.dbc
+    if pkPerson:
+      sqlFilt='fkPerson=%d'%pkPerson
+      sqlFilt='ps.id=%d'%pkPerson
+      sqlData=dbc.execute('SELECT fstName,lstName FROM Person ps WHERE id=%d'%pkPerson).fetchone()
+      path='therapy_progress'
+      try:
+        os.mkdir(path)
+      except FileExistsError:
+        pass
+      fn=os.path.join(path,'Verlauf'+str(sqlData[1])+str(sqlData[0])+'.pdf')
 
     sqlTplBeh='SELECT fkPerson,lstName,fstName,dtBirth,phone,eMail,dtTreatment,tr.comment,document FROM Treatment tr LEFT JOIN Person ps ON tr.fkPerson=ps.id'
     sqlTplOrd='ORDER BY fkPerson,tr.dtTreatment'''
@@ -116,7 +128,7 @@ class MoKaBu:
     repBeh=report.TherapyProgress(fn)
 
     fkCurPerson=-1
-    for recBeh in dbcRng.execute(sqlBeh):
+    for recBeh in dbc.execute(sqlBeh):
       fkPerson=recBeh[0]
       if fkPerson!=fkCurPerson:
         fkCurPerson=fkPerson

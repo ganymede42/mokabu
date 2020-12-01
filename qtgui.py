@@ -11,7 +11,7 @@ import mokabu
 import report
 import wordprocessor as wp
 import traceback
-
+import sqlite3 as lite
 
 def excepthook(exc_type,exc_value,exc_tb):
   tb="".join(traceback.format_exception(exc_type,exc_value,exc_tb))
@@ -393,12 +393,10 @@ class WndNewInvoices(qtw.QWidget):
     tbTrt.setMinimumHeight(600)
     #loF.addRow('Treatments',tbTrt)
     loV.addWidget(tbTrt)
-    app=qtw.QApplication.instance()
-    self.dbc=dbc=app.mkb.db.cursor()
     self.FillTreatment()
 
   def FillTreatment(self):
-    dbc=self.dbc
+    dbc=qtw.QApplication.instance().mkb.db.cursor()
     tbTrt=self.tbTreatment
     sqlData=dbc.execute('SELECT trt.id,fkPerson,dtTreatment,lstName,fstName,trt.comment FROM Treatment trt LEFT JOIN Person ps on trt.fkPerson=ps.id  WHERE fkInvoice is NULL ORDER BY ps.id,dtTreatment').fetchall()
     tbTrt.clearContents()
@@ -441,6 +439,90 @@ class WndNewInvoices(qtw.QWidget):
     return
 
 
+
+#class WndSqlTblView(qtw.QDialog):
+class WndQuickSelect(qtw.QTableWidget):
+  def __init__(self,title='WndQuickSelect',geometry=(100,100,1700,700)):
+    super(WndQuickSelect,self).__init__()
+    self.setGeometry(*geometry)
+    self.setWindowTitle(title)
+
+    lbl=('Person','Behandlung','Rechnung')
+
+    self.setColumnCount(len(lbl))
+    #tbIvc.setRowCount(len(sqlData))
+
+    self.setHorizontalHeaderLabels(lbl)
+    hh=self.horizontalHeader()
+    hh.setMinimumSectionSize(20)
+    vh=self.verticalHeader()
+    vh.setDefaultSectionSize(20)
+    #qTbl.resizeColumnsToContents()
+    width=(200,100,100)
+    for i,w in enumerate(width):
+      self.setColumnWidth(i,w)
+    #qTbl.setFixedWidth(400)
+    self.setMinimumWidth(sum(width)+50)
+    self.setMinimumHeight(600)
+    #self.cellDoubleClicked.connect(self.OnTblDblClick)
+    #loF.addRow('Treatments',tbTrt)
+    self.FillTreatment()
+    self.cellDoubleClicked.connect(self.OnDblClick)
+
+
+  def FillTreatment(self):
+    dbc=qtw.QApplication.instance().mkb.db.cursor()
+    sqlData=dbc.execute('''\
+SELECT tr.fkPerson,tr.id,tr.fkInvoice,ps.fstName||' '||ps.lstName as fstLst,tr.dtTreatment,iv.dtInvoice
+FROM treatment tr
+LEFT JOIN Person ps on tr.fkPerson=ps.id
+LEFT JOIN Invoice iv on tr.fkInvoice=iv.id
+ORDER BY tr.dtTreatment DESC''').fetchall()
+    self.clearContents()
+    self.setRowCount(len(sqlData))
+
+    self.idx2ref=idx2ref=list()
+    for ir,row in enumerate(sqlData):
+      pkTrt,fkPrs,fkIvc=row[0:3]
+      idx2ref.append(row[0:3])
+      for ic,data in enumerate(row[3:]):
+        if data is None:
+          strCell=''
+        else:
+          if ic>0:
+            try:
+              strCell=time.strftime('%d.%m.%y',time.strptime(data,'%Y-%m-%d'))
+            except BaseException as e:
+              strCell=str(strCell)
+          else:
+            strCell=str(data)
+
+        tw=qtw.QTableWidgetItem(strCell)
+        tw.setFlags(qtc.Qt.ItemIsEnabled|qtc.Qt.ItemIsSelectable)
+        #if row[2] is not None:
+        #  tw.setBackground(col)
+        self.setItem(ir,ic,tw)
+    self.setCurrentCell(-1,-1) #set current cell to 'invalid'
+
+  def OnDblClick(self,row,col):
+    print('OnTblDblClick')
+    idx2ref=self.idx2ref
+    fkPrs,pkTrt,fkIvc=idx2ref[row]
+    if col==0:
+      #wnd=WndPerson('WHERE id=%d'%pkTrt,'WndTreatment: trtId==%d'%pkTrt,fkPrs)
+      wnd=WndPerson('title')
+    elif col==1:
+      wnd=WndTreatment('WHERE id=%d'%pkTrt,'WndTreatment: trtId==%d'%pkTrt,fkPrs)
+    elif col==2:
+      wnd=WndInvoice('WHERE id=%d'%pkTrt,'WndInvoice: ivcId==%d'%fkIvc,fkPrs)
+
+    sub=qtw.QMdiSubWindow()
+    sub.setWidget(wnd)
+    #sub.setWindowTitle("subwindow"+str(MainWindow.count))
+    self.parent().parent().parent().parent().mdi.addSubWindow(sub)
+    sub.show()
+
+
 class WndSyncIvcAcc(qtw.QWidget):
   def __init__(self,title,geometry=(100,100,400,500)):
     super(WndSyncIvcAcc,self).__init__()
@@ -454,10 +536,6 @@ class WndSyncIvcAcc(qtw.QWidget):
 
     #loV.addLayout(loF)
     loV.addLayout(loH)
-
-
-    app=qtw.QApplication.instance()
-    self.dbc=dbc=app.mkb.db.cursor()
 
     #Adding sql table for Incoive
     lbl=('id','cnt','fkAcc','date','lstName','fstName','sum','comment')
@@ -503,7 +581,7 @@ class WndSyncIvcAcc(qtw.QWidget):
 
 
   def FillInvoice(self):
-    dbc=self.dbc
+    dbc=qtw.QApplication.instance().mkb.db.cursor()
     tbIvc=self.tbIvc
     sqlData=dbc.execute(\
 '''SELECT iv.id,COUNT(tr.id) AS cntTrt,fkAccount,dtInvoice,ivcLstName,ivcFstName,SUM(duration*costPerHour/60) AS cost,iv.comment
@@ -546,7 +624,7 @@ class WndSyncIvcAcc(qtw.QWidget):
 
 
   def FillAccout(self):
-    dbc=self.dbc
+    dbc=qtw.QApplication.instance().mkb.db.cursor()
     tbAcc=self.tbAcc
 #    sqlData=dbc.execute(\
 #'''SELECT ac.id,iv.id,dtEvent,refText,amount FROM Account ac LEFT JOIN Invoice iv ON ac.id=iv.fkAccount
@@ -602,9 +680,7 @@ class WndSyncIvcAcc(qtw.QWidget):
 
     pkIvc=self.idx2ivc[rwIvc]
     pkAcc=self.idx2acc[rwAcc]
-    app=qtw.QApplication.instance()
-    db=app.mkb.db
-    dbc=self.dbc
+    dbc=qtw.QApplication.instance().mkb.db.cursor()
     sqlStr='SELECT fkAccount FROM Invoice WHERE id=?'
     oldVal=dbc.execute(sqlStr,(pkIvc,)).fetchone()[0]
     print(pkIvc,pkAcc,oldVal)
@@ -712,8 +788,7 @@ class WndPerson(WndSqlBase):
     loV.addLayout(loH)
     self.cbNaVo=cb=qtw.QComboBox()
 
-    app=qtw.QApplication.instance()
-    self.dbc=dbc=app.mkb.db.cursor()
+    dbc=qtw.QApplication.instance().mkb.db.cursor()
     itemsNaVo=dbc.execute('SELECT id, lstName||" "||fstName FROM Person ORDER BY lstName,fstName').fetchall()
 
     cb.setEditable(True)
@@ -780,7 +855,7 @@ class WndPerson(WndSqlBase):
       print("TODO:New Person inserted")
       cb.removeItem(i)
     else:
-      dbc=self.dbc
+      dbc=qtw.QApplication.instance().mkb.db.cursor()
       d=dbc.execute('SELECT * FROM Person WHERE id=%d'%curData).fetchone()
       #print(d)
       for w,d in zip(self.fldLst,d):
@@ -795,7 +870,7 @@ class WndPerson(WndSqlBase):
     print('OnRptTreatmentProgress')
     app=qtw.QApplication.instance()
     curData=self.cbNaVo.currentData()
-    app.mkb.report_therapy_progress('fkPerson=%d'%curData)
+    app.mkb.report_therapy_progress(pkPerson=curData)
 
   def OnWndTreatment(self):
     cb=self.cbNaVo
@@ -858,8 +933,7 @@ class WndTreatment(WndSqlBase):
     loV.addLayout(loF)
     self.cbTrt=cb=qtw.QComboBox()
 
-    app=qtw.QApplication.instance()
-    self.dbc=dbc=app.mkb.db.cursor()
+    dbc=qtw.QApplication.instance().mkb.db.cursor()
     sqlQry='SELECT id, dtTreatment, comment FROM Treatment'
     if sqlFilter is not None: sqlQry+=' '+sqlFilter
     sqlQry+=' ORDER BY fkPerson,dtTreatment'
@@ -929,7 +1003,7 @@ class WndTreatment(WndSqlBase):
       print("TODO:New Person inserted")
       cb.removeItem(i)
     else:
-      dbc=self.dbc
+      dbc=qtw.QApplication.instance().mkb.db.cursor()
       row=dbc.execute('SELECT * FROM Treatment WHERE id=%d'%curData).fetchone()
       #print(d)
       for w,d in zip(self.fldLst,row):
@@ -942,7 +1016,7 @@ class WndTreatment(WndSqlBase):
 
   def CbIvcFill(self,pkPerson):
       cbIvc=self.cbIvc
-      dbc=self.dbc
+      dbc=qtw.QApplication.instance().mkb.db.cursor()
       cbIvc.clear()
       itemsIvc=dbc.execute('SELECT id, dtInvoice FROM Invoice WHERE fkPerson=%s ORDER BY dtInvoice'%pkPerson).fetchall()
       cbIvc.addItem('_not set_',None)
@@ -994,13 +1068,14 @@ class WndTreatment(WndSqlBase):
       elif w.windowTitle()=='dtTreatment':
         qtw.QLineEdit.setText(w,(time.strftime('%d.%m.%y',time.gmtime())))
       elif w.windowTitle()=='comment':
-        row=self.dbc.execute('SELECT fstName FROM Person WHERE id=%d'%fkPerson).fetchone()
+        dbc=qtw.QApplication.instance().mkb.db.cursor()
+        row=dbc.execute('SELECT fstName FROM Person WHERE id=%d'%fkPerson).fetchone()
         w.setText('Therapie mit %s'%row[0])
       else:
         w.setText('')
 
 class TblInvoice(qtw.QTableWidget):
-  def __init__(self,):
+  def __init__(self,wndInvoice):
     super(TblInvoice,self).__init__(1,4)#rows cols
     self.setHorizontalHeaderLabels(('date','min','comment','Fr/h',))
     hh=self.horizontalHeader()
@@ -1012,14 +1087,90 @@ class TblInvoice(qtw.QTableWidget):
       self.setColumnWidth(i,w)
     #qTbl.setFixedWidth(400)
     self.setMinimumWidth(500)
+    self.wndInvoice=wndInvoice
+    self.cellDoubleClicked.connect(self.OnTbTrtDblClick)
+
+  def populate(self,pkInvoice,fkPerson):
+    self.key=(pkInvoice,fkPerson)
+    dbc=qtw.QApplication.instance().mkb.db.cursor()
+    sqlData=dbc.execute('SELECT id,fkPerson,dtTreatment,duration,comment,costPerHour FROM Treatment WHERE fkInvoice=%d ORDER BY dtTreatment;'%pkInvoice).fetchall()
+    self.clearContents()
+    rc=len(sqlData)
+    self.setRowCount(rc+1)
+    self.lstTrtKey=lstTrtKey=list()
+
+    for ir,row in enumerate(sqlData):
+      key=row[0:2];lstTrtKey.append(key)
+      for ic,data in enumerate(row[2:]):
+        if ic==0: data=time.strftime('%d.%m.%y',time.strptime(data,'%Y-%m-%d'))
+        else:     data=str(data)
+        tw=qtw.QTableWidgetItem(data)
+        tw.setFlags(qtc.Qt.ItemIsEnabled|qtc.Qt.ItemIsSelectable)
+        if ic!=2: tw.setTextAlignment(qtc.Qt.AlignCenter)
+        #tw=qtw.QTableWidgetItem(str(data),type=int)
+        #qtc.Qt.ItemIsEnabled
+        self.setItem(ir,ic,tw)
+
+    self.cbTrt=cb=qtw.QComboBox()
+    sqlData=dbc.execute('SELECT id,fkPerson,dtTreatment FROM Treatment WHERE fkInvoice is NULL AND fkPerson=%d ORDER BY dtTreatment;'%fkPerson).fetchall()
+    cb.addItem('',-1)
+    cb.currentIndexChanged.connect(self.OnCbSelTrtCng)
+    for row in sqlData:
+      date=time.strftime('%d.%m.%y',time.strptime(row[2],'%Y-%m-%d'))
+      cb.addItem(date,row[0])
+      #cb.addItem(str(row),row[0])
+    #cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
+    self.setCellWidget(rc,0,cb)
+    return
+
+  def OnCbSelTrtCng(self,i):
+    #add a treatment to the current invoice
+    app=qtw.QApplication.instance()
+    db=app.mkb.db
+    dbc=db.cursor()
+    cb=self.cbTrt
+    pkTreatment=cb.currentData()
+    pkInvoice=self.wndInvoice.cbIvc.currentData()
+    print('add Treatment %d to invoice %d'%(pkTreatment,pkInvoice))
+    sqlStr='UPDATE Treatment SET fkInvoice=? WHERE id=?'
+    dbc.execute(sqlStr,(pkInvoice,pkTreatment))
+    self.populate(*self.key)
+    db.commit()
+
+  def OnTbTrtDblClick(self,row,col):
+    #open tretment that was double clicked
+    trtKey=self.lstTrtKey[row]
+    print('Open treatment',trtKey)
+    wnd=WndTreatment('WHERE id=%d'%trtKey[0],'WndTreatment: trtId==%d'%trtKey[0],trtKey[1])
+    idx=0
+    wnd.cbTrt.setCurrentIndex(idx)
+    wnd.OnCbSelChanged(idx)#go to first invoice
+
+    sub=qtw.QMdiSubWindow()
+    sub.setWidget(wnd)
+    #sub.setWindowTitle("subwindow"+str(MainWindow.count))
+    self.wndInvoice.parent().parent().parent().parent().mdi.addSubWindow(sub)
+    sub.show()
+    return
 
   def contextMenuEvent(self, event):
     ctxMn=qtw.QMenu(self)
     actDel=ctxMn.addAction('remove from invoice')
     action=ctxMn.exec_(self.mapToGlobal(event.pos()))
-
     if action==actDel:
       print('delete')
+      item=self.itemAt(event.pos())
+      idx=self.indexFromItem(item)
+      idx.row()
+      idx.data()
+      pkTreatment,fkPerson=self.lstTrtKey[idx.row()]
+
+      db=qtw.QApplication.instance().mkb.db
+      dbc=db.cursor()
+      sqlStr='UPDATE Treatment SET fkInvoice=NULL WHERE id=?'
+      dbc.execute(sqlStr,(pkTreatment,))
+      self.populate(*self.key)
+      db.commit()
 
 
 class WndInvoice(WndSqlBase):
@@ -1037,8 +1188,7 @@ class WndInvoice(WndSqlBase):
     self.cbIvc=cb=qtw.QComboBox()
     #self.cbNaVoPkPers
 
-    app=qtw.QApplication.instance()
-    self.dbc=dbc=app.mkb.db.cursor()
+    dbc=qtw.QApplication.instance().mkb.db.cursor()
     sqlQry='SELECT id, dtInvoice FROM Invoice'
     if sqlFilter is not None: sqlQry+=' '+sqlFilter
     sqlQry+=' ORDER BY fkPerson,dtInvoice'
@@ -1047,7 +1197,10 @@ class WndInvoice(WndSqlBase):
     cb.setEditable(True)
     cmpRng=[]
     for pkRng, datRng in itemsRng:
-      datRng=time.strftime('%d.%m.%y',time.strptime(datRng,'%Y-%m-%d'))
+      try:
+        datRng=time.strftime('%d.%m.%y',time.strptime(datRng,'%Y-%m-%d'))
+      except BaseException as e:
+        datRng=str(datRng)
       cmpRng.append(datRng)
       cb.addItem(datRng,pkRng)
     cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
@@ -1078,8 +1231,7 @@ class WndInvoice(WndSqlBase):
     loF.addRow(txt,w)
 
     #Adding sql table for treatments
-    self.tbTreatment=tbTrt=TblInvoice()
-    tbTrt.cellDoubleClicked.connect(self.OnTbTrtDblClick)
+    self.tbTreatment=tbTrt=TblInvoice(self)
     loF.addRow('Treatments',tbTrt)
 
     for txt,func in (("Report Invoice",self.OnRptInvoice),("Delete",self.OnDelete),("New",self.OnNew),("Save",self.OnSave)):
@@ -1088,77 +1240,26 @@ class WndInvoice(WndSqlBase):
         btn.clicked.connect(func)
       loH.addWidget(btn)
 
-  def OnTbTrtDblClick(self,row,col):
-    trtKey=self.lstTrtKey[row]
-    print('Open treatment',trtKey)
-    wnd=WndTreatment('WHERE id=%d'%trtKey[0],'WndTreatment: trtId==%d'%trtKey[0],trtKey[1])
-    idx=0
-    wnd.cbTrt.setCurrentIndex(idx)
-    wnd.OnCbSelChanged(idx)#go to first invoice
-
-    sub=qtw.QMdiSubWindow()
-    sub.setWidget(wnd)
-    #sub.setWindowTitle("subwindow"+str(MainWindow.count))
-    self.parent().parent().parent().parent().mdi.addSubWindow(sub)
-    sub.show()
-    return
-
-
-  def OnCbSelTrtCng(self,i):
-    cb=self.cbTrt
-    pkTreatment=cb.currentData()
-    print('TODO:add Treatment %d to this invoice'%pkTreatment)
-
   def OnCbSelChanged(self,i):
+    #changed the current invoice
     cb=self.cbIvc
     if not self.SwitchRecord():
       cb.setCurrentText('')
       return
     pkInvoice=cb.currentData()
     if pkInvoice is None: return
-    dbc=self.dbc
-    d=dbc.execute('SELECT * FROM Invoice WHERE id=%d'%pkInvoice).fetchone()
+    dbc=qtw.QApplication.instance().mkb.db.cursor()
+    dbRow=dbc.execute('SELECT * FROM Invoice WHERE id=%d'%pkInvoice).fetchone()
     #print(d)
-    for w,d in zip(self.fldLst,d):
+    for w,d in zip(self.fldLst,dbRow):
       if d is None:
         d=''
       else:
         d=str(d)
       w.setText(d)
     self.SetChanged(False)
-    sqlData=dbc.execute('SELECT id,fkPerson,dtTreatment,duration,comment,costPerHour FROM Treatment WHERE fkInvoice=%d ORDER BY dtTreatment;'%pkInvoice).fetchall()
-    tbTrt=self.tbTreatment
-    tbTrt.clearContents()
-    rc=len(sqlData)
-    tbTrt.setRowCount(rc+1)
-    self.lstTrtKey=lstTrtKey=list()
-
-    for ir,row in enumerate(sqlData):
-      key=row[0:2];lstTrtKey.append(key)
-      for ic,data in enumerate(row[2:]):
-        if ic==0: data=time.strftime('%d.%m.%y',time.strptime(data,'%Y-%m-%d'))
-        else:     data=str(data)
-        tw=qtw.QTableWidgetItem(data)
-        tw.setFlags(qtc.Qt.ItemIsEnabled|qtc.Qt.ItemIsSelectable)
-        if ic!=2: tw.setTextAlignment(qtc.Qt.AlignCenter)
-        #tw=qtw.QTableWidgetItem(str(data),type=int)
-        #qtc.Qt.ItemIsEnabled
-        tbTrt.setItem(ir,ic,tw)
-
-
-    self.cbTrt=cb=qtw.QComboBox()
-    for w in self.fldLst:
-      if w.windowTitle()=='fkPerson':
-        fkPerson=int(w.text())
-        break
-    sqlData=dbc.execute('SELECT id,fkPerson,dtTreatment FROM Treatment WHERE fkInvoice is NULL AND fkPerson=%d ORDER BY dtTreatment;'%fkPerson).fetchall()
-    cb.addItem('',-1)
-    cb.currentIndexChanged.connect(self.OnCbSelTrtCng)
-    for row in sqlData:
-      cb.addItem(str(row),row[0])
-    #cb.setCurrentIndex(-1) #by default the text will be the first item. This clears the value
-    tbTrt.setCellWidget(rc,0,cb)
-    return
+    fkPerson=dbRow[1]
+    self.tbTreatment.populate(pkInvoice,fkPerson)
 
   def OnRptInvoice(self):
     print('OnRptInvoice')
@@ -1179,7 +1280,20 @@ class WndInvoice(WndSqlBase):
 
   def OnDelete(self):
     #TODO
-    MsgBox('NOT YET IMPLEMENTED')
+    curData=self.cbIvc.currentData()
+    db=qtw.QApplication.instance().mkb.db
+    dbc=db.cursor()
+    sqlStr='DELETE FROM Invoice WHERE id=?'
+    try:
+      dbc.execute(sqlStr,(curData,))
+    except lite.IntegrityError as e:
+      detail='Failed:\n'+str(type(e))+'\n'+str(e)+'\n'+sqlStr
+      MsgBox('Delete not possible.\nThe invoice must have no assigned treatments',title="SQL error"+' '*100,msgInfo=None,detail=detail,btn=qtw.QMessageBox.Ok,
+             icon=qtw.QMessageBox.Critical)
+      return
+    db.commit()
+    MsgBox('Invoice deleted',title="SQL info",btn=qtw.QMessageBox.Ok)
+    self.tbTreatment.clearContents()
 
   def OnNew(self):
     if not self.SwitchRecord(): return
@@ -1211,22 +1325,21 @@ class WndMain(qtw.QMainWindow):
 
     act=AddMenuAction(self,mnFile,"Quit",self.OnQuit)
     mnEdit=mainMenu.addMenu('&Edit')
-    act=AddMenuAction(self,mnEdit,"Table Person",self.OnTblPerson,shortcut="Ctrl+Shift+A")
-    act=AddMenuAction(self,mnEdit,"Table Treatment",self.OnTblTreatment,shortcut="Ctrl+Shift+S")
-    act=AddMenuAction(self,mnEdit,"Table Invoice",self.OnTblInvoice,shortcut="Ctrl+Shift+D")
-    act=AddMenuAction(self,mnEdit,"Table Account",self.OnTblAccount,shortcut="Ctrl+Shift+F")
     act=AddMenuAction(self,mnEdit,"Person",self.OnWndPerson,shortcut="Ctrl+A")
     act=AddMenuAction(self,mnEdit,"New Assisted Invoices",self.OnWndNewInvoices)
-    act=AddMenuAction(self,mnEdit,"Import Account CSV",self.OnImportCSV,shortcut="Ctrl+Q")
+    act=AddMenuAction(self,mnEdit,"Import Account CSV",self.OnImportCSV,shortcut="Ctrl+S")
     act=AddMenuAction(self,mnEdit,"Sync Invoice->Account",self.OnWndSyncIvcAcc)
-    act=AddMenuAction(self,mnEdit,"OnQryTreatment",self.OnQryTreatment)
-    act=AddMenuAction(self,mnEdit,"OnQryInvoice",self.OnQryInvoice)
-    act=AddMenuAction(self,mnEdit,"OnQryNewInvoice",self.OnQryNewInvoice)
+    act=AddMenuAction(self,mnEdit,"Quick Select Table",self.OnWndQuickSelect,shortcut="Ctrl+Q")
     mnRpt=mainMenu.addMenu('&Report')
     act=AddMenuAction(self,mnRpt,"Invoices",self.OnRepInvoices)
     act=AddMenuAction(self,mnRpt,"Therapy Progress",self.OnRepTherapyProgress)
     act=AddMenuAction(self,mnRpt,"Couvert",self.OnCouvert)
-
+    mnDbg=mainMenu.addMenu('&Debug')
+    act=AddMenuAction(self,mnDbg,"Table Person",self.OnTblPerson,shortcut="Ctrl+Shift+A")
+    act=AddMenuAction(self,mnDbg,"Table Treatment",self.OnTblTreatment,shortcut="Ctrl+Shift+S")
+    act=AddMenuAction(self,mnDbg,"Table Invoice",self.OnTblInvoice,shortcut="Ctrl+Shift+D")
+    act=AddMenuAction(self,mnDbg,"Table Account",self.OnTblAccount,shortcut="Ctrl+Shift+F")
+    act=AddMenuAction(self,mnDbg,"OnWndChildTest",self.OnWndChildTest)
 
   def closeEvent(self, event):
     print('closeEvent')
@@ -1291,7 +1404,6 @@ class WndMain(qtw.QMainWindow):
     self.mdi.addSubWindow(sub)
     sub.show()
 
-
   def OnImportCSV(self):
     print("OnImportCSV")
     #https://doc.qt.io/qt-5/qfiledialog.html#Option-enum
@@ -1315,21 +1427,14 @@ class WndMain(qtw.QMainWindow):
     self.mdi.addSubWindow(sub)
     sub.show()
 
-  def OnQryTreatment(self):
-    print("OnQryTreatment")
-    wnd=qtw.QWidget();wnd.setWindowTitle("WndQryTreatment")
-    WndChildAdd(wnd)
-
-  def OnQryInvoice(self):
-    print("OnQryInvoice")
-    wnd=qtw.QWidget();wnd.setWindowTitle("WndQryInvoice")
-
-    WndChildAdd(wnd)
-
-  def OnQryNewInvoice(self):
-    print("OnQryNewInvoice")
-    wnd=qtw.QWidget();wnd.setWindowTitle("WndQryNewInvoice")
-    WndChildAdd(wnd)
+  def OnWndQuickSelect(self):
+    print("OnWndQuickSelect")
+    wnd=WndQuickSelect()
+    sub=qtw.QMdiSubWindow()
+    sub.setWidget(wnd)
+    #sub.setWindowTitle("subwindow"+str(MainWindow.count))
+    self.mdi.addSubWindow(sub)
+    sub.show()
 
   def OnRepInvoices(self):
     print("OnRepInvoices")
@@ -1345,6 +1450,11 @@ class WndMain(qtw.QMainWindow):
     print("OnCouvert")
     report.Couvert('Couvert.pdf')
     report.default_app_open('Couvert.pdf')
+
+  def OnWndChildTest(self):
+    print("OnWndChildTest")
+    wnd=qtw.QWidget();wnd.setWindowTitle("WndQryTreatment")
+    WndChildAdd(wnd)
 
 
 #https://doc.qt.io/qtforpython/PySide2/QtSql/QSqlRelationalTableModel.html
