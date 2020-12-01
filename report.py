@@ -310,7 +310,7 @@ def dateconvert(dateIn,mode=0):
     dateStruct=time.strptime(dateIn,'%Y-%m-%d')
   except (ValueError,TypeError) as e:
     print('error in dateconvert:"%s"'%str(dateIn),file=sys.stderr)
-    return 'xx.xx.xx.'
+    return str(dateIn)
   if mode==0:
     dateOut=time.strftime('%d.%m.%Y',dateStruct)
   elif mode==1:
