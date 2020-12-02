@@ -90,37 +90,15 @@ DONE IN THIS COMMIT
 - Bein 'assisted invoice' und einzelne Invoice Generierung wird die Rechnung unter invoice/Rng<NameVornameDatum>.pdf gespeichert.
 
 ```
-current:
 
-class WndPerson(WndSqlBase):
-  def __init__(self,title):
+Deploy
+------
+```
+rm /tmp/mokabu.zip; zip /tmp/mokabu.zip *.py  data/mokabu.db
+```
 
-class WndTreatment(WndSqlBase):
-  def __init__(self,sqlFilter=None,title,fkPerson=None):
+SCRATCH
+-------
+```
 
-class WndInvoice(WndSqlBase):
-  def __init__(self,sqlFilter=None,title,fkPerson=None):
-
-
-new:
-
-class WndPerson(WndSqlBase):
-  def __init__(self,title,sqlCombo=None,pkPerson=None):
-  have a function populate(sqlCombo,pkPerson)
-  -> pobupate combobox and selects/displays the record pkPerson
-  ->if sqlCombo=None use: > SELECT id, lstName||" "||fstName FROM Person ORDER BY lstName,fstName'
-
-class WndTreatment(WndSqlBase):
-  def __init__(self,sqlCombo=None,title,fkPerson=None,pkTreatment=None):
-  have a function populate(sqlCombo,pkPerson,pkTreatment)
-  -> pobupate combobox and selects/displays the record pkTreatment
-  ->if sqlCombo=None use: > filter combobox on fkPerson
-
-
-class WndInvoice(WndSqlBase):
-  def __init__(self,sqlCombo=None,title,fkPerson=None):
-
-
-
-
-
+```

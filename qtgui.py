@@ -685,7 +685,8 @@ class WndSyncIvcAcc(qtw.QWidget):
 
     pkIvc=self.idx2ivc[rwIvc]
     pkAcc=self.idx2acc[rwAcc]
-    dbc=qtw.QApplication.instance().mkb.db.cursor()
+    db=qtw.QApplication.instance().mkb.db
+    dbc=db.cursor()
     sqlStr='SELECT fkAccount FROM Invoice WHERE id=?'
     oldVal=dbc.execute(sqlStr,(pkIvc,)).fetchone()[0]
     print(pkIvc,pkAcc,oldVal)
@@ -1477,8 +1478,8 @@ class WndMain(qtw.QMainWindow):
     print(fname)
     if fname:
       app=qtw.QApplication.instance()
-      app.mkb.sync_invoice(fname)
-      MsgBox('CSV Import done')
+      cnt=app.mkb.sync_invoice(fname)
+      MsgBox('CSV Import done\n\n%d ignored duplicates\n%d new entries'%cnt)
 
   def OnWndSyncIvcAcc(self):
     print("OnWndSyncIvcAcc")

@@ -137,7 +137,7 @@ class MoKaBu:
     repBeh.publish()
     report.default_app_open(fn);
 
-  def sync_invoice(self,fn='Kontoauszug_2020_10_09.csv'):
+  def sync_invoice(self,fn='Kontoauszug_2020_10_09.csv',verbose=False):
     import csv,re,time
     db=self.db
     dbc=self.dbc
@@ -151,7 +151,9 @@ class MoKaBu:
     sqlData=[]
     header=rows.__next__()
     #['\ufeffDatum', 'Valuta', 'Buchungstext', 'Belastung', 'Gutschrift', 'Saldo']
-    for refDat,valuta,text,belastung,gutschrift,saldo in rows:
+    cntIgn=0
+    for r in rows:
+      refDat,valuta,text,belastung,gutschrift,saldo=r[:6]
       if gutschrift!='':
         amount=float(gutschrift.replace("'",''))
       else:
@@ -171,17 +173,16 @@ class MoKaBu:
       #key=dtEvent+str(refNr)+comment+refText
       key=(dtEvent,comment,refNr,refText,amount)
       if key in account:
-        print('ignore duplicate:',key)
+        if verbose: print('ignore duplicate:',key)
+        cntIgn+=1
         continue
       sqlData.append((dtEvent,comment,refNr,refText,amount))
 
+    cntAdd=len(sqlData)
     dbc.executemany("INSERT INTO Account (dtEvent,comment,refNr,refText,amount) VALUES (?,?,?,?,?)", sqlData)
     db.commit()
-    #db.close()
-    #try:
-    #except lite.Error as e:
-    #  print(schema+" Error %s:" % e.args[0])
-
+    if verbose: print('sync_invoice: ignored:%d added:%d'%(cntIgn,cntAdd))
+    return (cntIgn,cntAdd)
 
 
 if __name__=='__main__':
