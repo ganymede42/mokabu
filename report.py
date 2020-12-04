@@ -137,12 +137,12 @@ class Invoice():
     story.append(rlp.Spacer(1,-24))
     txt='''
     %s<br/>
-    %s %s<br/>'''%klient[0:3]
+    %s %s<br/>'''%tuple(map(lambda x: x if x else '',klient[0:3]))
     for i in range(3,6):
       adr=klient[i]
       if adr: # not None and not empty
         txt+=adr+'<br/>'
-    txt+='%s %s<br/>'''%klient[6:8]
+    txt+='%s %s<br/>'''%tuple(map(lambda x: x if x else '',klient[6:8]))
     story.append(rlp.Paragraph(txt,styN))
     story.append(rlp.Spacer(1,24+24))
     txt='Zürich, %s'%dateconvert(datRng)
@@ -207,7 +207,7 @@ class Invoice():
                                  ('ALIGN',(5,0),(5,-1),'RIGHT'),
                                  ('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black)]))
     else:
-      data=[('Datum','Stundenansatz','Minuten','Total',)]
+      data=[('Datum','Bemerkung','Stundenansatz','Minuten','Total',)]
       totSum=0.
       for datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif in behandlungen:
         if Stundenansatz is None: Stundenansatz=0
@@ -216,20 +216,21 @@ class Invoice():
         totSum+=tot
         #pBemerkung=
         if Bemerkung:
-          pBemerkung=rlp.Paragraph('<font size="8">'+Bemerkung+'</font>',styN)
+          #pBemerkung=rlp.Paragraph('<font size="10">'+Bemerkung+'</font>',styN)
+          pBemerkung=rlp.Paragraph(Bemerkung,styN)
         else:
           pBemerkung=''
-        data.append((dateconvert(datBehandlung),'%.2f'%Stundenansatz,'%d Min'%Dauer,'%.2f'%tot))
+        data.append((dateconvert(datBehandlung),pBemerkung,'%.2f'%Stundenansatz,'%d Min'%Dauer,'%.2f'%tot))
       #pTotSum='%.2f'%totSum
       pTotSum=rlp.Paragraph('<b>%.2f</b>'%totSum,styR)
-      data.append(('','','',pTotSum))
+      data.append(('','','','',pTotSum))
 
-      t=rlp.Table(data,colWidths=(60,80,60,50,))
+      t=rlp.Table(data,colWidths=(60,160,80,60,50,))
       t.hAlign='LEFT'
       t.setStyle(rlp.TableStyle([#('INNERGRID',(0,0),(-1,-1),0.25,rll.colors.black),
                                  #('BOX',(0,0),(-1,-1),0.25,rll.colors.black),
                                  ('ALIGN',(0,0),(0,-1),'RIGHT'), #datum
-                                 ('ALIGN',(1,0),(-1,-1),'RIGHT'), #others
+                                 ('ALIGN',(2,0),(-1,-1),'RIGHT'), #others
                                  ('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black)]))
 
     story.append(t)
@@ -278,7 +279,7 @@ class Invoice():
       x0,y0,x1,y1=w.getBounds()
       drw=Drawing(x1-x0,y1-y0)
       drw.add(w)
-      x=16*rlu.cm;y=19*rlu.cm
+      x=16*rlu.cm;y=19.8*rlu.cm
       drw.drawOn(canvas,x,y)
       canvas.setFont("Helvetica", 8)
       canvas.drawCentredString(x+1.7*rlu.cm,y-.1*rlu.cm,'QR-Rechnung')
@@ -561,10 +562,12 @@ if __name__ == '__main__':
 
   def testInvoice(fn):
     lstKlient=\
-      (('Frau ', 'Saki', 'Karakurt', 'Meierwiesenstrasse 24', '', '', '8107', 'Buchs', 'Bayraktar', 'Aras', '2012-02-15', '765.234.433.454 Frick'),
-       ('Familie', 'Preisig U. &', 'C.', 'Sihlaustr. 3', '', '', '8134', 'Adliswil', 'Radic Baumgartner', 'Ksenija', '1975-06-18', None),)
+      ((None, 'Saki', 'Karakurt', 'Meierwiesenstrasse 24', '', '', None, 'Buchs', 'Bayraktar', 'Aras', '2012-02-15', '765.234.433.454 Frick'),
+      #(('Frau ','Saki','Karakurt','Meierwiesenstrasse 24','','','8107','Buchs','Bayraktar','Aras','2012-02-15','765.234.433.454 Frick'),
+        ('Familie', 'Preisig U. &', 'C.', 'Sihlaustr. 3', '', '', '8134', 'Adliswil', 'Radic Baumgartner', 'Ksenija', '1975-06-18', None),)
     lstTpl=\
-      (None,0,1,2,4,8)
+      (None,8,9,10,12)
+      #(None,0,1,2,4,8)
     lstDatRng=\
       (('2020-03-17'),('2020-06-26'),)
     lstBeh=\

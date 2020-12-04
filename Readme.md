@@ -68,12 +68,7 @@ Gesammtberichte
 TODO:
 -----
 ```
-- Löschen von Rechnungen -> die dazugehörenden Behandlungen müssen 'entkoppelt werden' (fkInvoice=NULL)
-- Entfernen von Behandlungen aus Rechnungen
-- Hinzufügen von Behandlungen in Rechnungen
-- Einfügen von Behandlungen in Rechnungen (nicht nur auto-assistant)
-- Tabelle der nicht verrechneten Behandlungen (Invoice mit id=-1)
-- Button (checkbox) um Behandlung zu 'nicht verrechnet' hinzufügn/entfernen
+- bei 'InvoiceAcountSync': Popup menu und öffnen dazugehörenden records in child windows öffnen. Besseres handling
 - logging von Datenbank Aktionen
 - Bessere GUI Darstellung und resizing Verhalten der Formulare
 ```
@@ -87,18 +82,48 @@ Bugs:
 DONE IN THIS COMMIT
 -----
 ```
-- Bein 'assisted invoice' und einzelne Invoice Generierung wird die Rechnung unter invoice/Rng<NameVornameDatum>.pdf gespeichert.
+- Report Rechnung: 'Bemerkungsfeld' standartmässig auch drauf
+- combobox unten in Treatment entfernen
+- NOT NULL gewisser Einträge in der Datenbank:
+  Person->(anrede,lstName,fstName) Invoice->(dtInvoice) Treatment->(dtTreatment,comment)
+  -> use sqlitebrowser for this.
 
+- Bein 'assisted invoice' und einzelne Invoice Generierung wird die Rechnung unter invoice/Rng<NameVornameDatum>.pdf gespeichert.
+- Löschen von Rechnungen -> die dazugehörenden Behandlungen müssen 'entkoppelt werden' (fkInvoice=NULL)
+- Entfernen von Behandlungen aus Rechnungen
+- Hinzufügen von Behandlungen in Rechnungen
+- Einfügen von Behandlungen in Rechnungen (nicht nur auto-assistant)
+- Tabelle der nicht verrechneten Behandlungen (Invoice mit id=-1)
+- Button (checkbox) um Behandlung zu 'nicht verrechnet' hinzufügn/entfernen
 ```
 
 Deploy
 ------
 ```
-rm /tmp/mokabu.zip; zip /tmp/mokabu.zip *.py  data/mokabu.db
+rm /tmp/mokabu.zip; zip /tmp/mokabu.zip *.py  mokabu.db
+unzip -l /tmp/mokabu.zip
 ```
 
 SCRATCH
 -------
 ```
+remove file complitly from history:
+git filter-branch --index-filter "git rm -rf --cached --ignore-unmatch path_to_file" HEAD
+git subtree split
 
+git filter-branch --index-filter "git rm -rf --cached --ignore-unmatch  mokabu.db cleanupKlienten2020.txt populate.sql" HEAD
+
+git filter-branch --prune-empty --index-filter "git rm --cached --ignore-unmatch $(git ls-files | git ls-files | grep -v -e mokabu.db -e cleanupKlienten2020.txt -e populate.sql)"
+
+git filter-repo  --invert-paths --path cleanupKlienten2020.txt mokabu.db populate.sql
+
+mkdir /tmp/Mokabu
+git -C /tmp/Mokabu init
+git filter-repo --path cleanupKlienten2020.txt --path mokabu.db --path populate.sql --invert-paths --source ~/Documents/prj/Mokabu --target /tmp/Mokabu
+git -C /tmp/Mokabu replace -d `git -C /tmp/Mokabu replace`
+
+mkdir /tmp/Mokabu/data
+git -C /tmp/Mokabu/data init
+git filter-repo --path cleanupKlienten2020.txt --path mokabu.db --path populate.sql --replace-refs delete-no-add --source ~/Documents/prj/Mokabu --target /tmp/Mokabu/data
+git -C /tmp/Mokabu/data replace -d `git -C /tmp/Mokabu/data replace`
 ```

@@ -780,6 +780,65 @@ class WndSyncIvcAcc(qtw.QWidget):
         for i in range(tbIvc.columnCount()):
           tbIvc.item(idxIvc,i).setBackground(col)
 
+  def contextMenuEvent(self, event):
+    pos=event.pos()
+    cld=self.childAt(pos)
+
+    if not cld: return
+    tbl=cld.parent()
+    if tbl==self.tbIvc:
+      mode=0
+    elif tbl==self.tbAcc:
+      mode=1
+    else:
+      return
+    pos=pos-tbl.pos()
+    item=tbl.itemAt(pos)
+    idx=tbl.indexFromItem(item)
+    if mode==0:
+      #idx2ref=self.idx2refIvc
+      #fkPrs,pkTrt,fkIvc=idx2ref[idx.row()]
+      pass
+    else: # tb==1
+      #idx2ref=self.idx2refAcc
+      #fkPrs,pkTrt,fkIvc=idx2ref[idx.row()]
+      pass
+
+    ctxMn=qtw.QMenu(self)
+    actFiltAll=ctxMn.addAction('filter: all treatments')
+    actFiltOpen=ctxMn.addAction('filter: open treatments')
+    actFiltFree=ctxMn.addAction('filter: free of charge')
+    #if idx.column()==2:
+    #if fkIvc is None:
+    #  ctxMn.addSeparator()
+    #  actIvcFree=ctxMn.addAction('set to: free of charge')
+    #  actIvcGen=ctxMn.addAction('generate invoice')
+    #elif fkIvc==-1:
+    #  ctxMn.addSeparator()
+    #  actIvcCharge=ctxMn.addAction('set to: invoice')
+
+    action=ctxMn.exec_(self.mapToGlobal(event.pos()))
+    #if not action:
+    #  return
+    #if action==actFiltAll:
+    #  self.filtMode=0
+    #elif action==actFiltOpen:
+    #  self.filtMode=1
+    #elif action==actFiltFree:
+    #  self.filtMode=2
+    #elif fkIvc is None:
+    #  if action==actIvcFree:
+    #    self.SetPkTreatmentFkInvoice(pkTrt,-1)
+    #  elif action==actIvcGen:
+    #    res=MsgBox('Generate new invoice for this person?',
+     #              btn=qtw.QMessageBox.Ok|qtw.QMessageBox.Cancel,
+    #               icon=qtw.QMessageBox.Question)
+    #    if res==qtw.QMessageBox.Ok:
+    #      self.GenNewInvoice(fkPrs)
+    #elif fkIvc==-1:
+    #  if action==actIvcCharge:
+    #    self.SetPkTreatmentFkInvoice(pkTrt,None)
+    #self.populate()
 
 class WndPerson(WndSqlBase):
   def __init__(self,pkPerson=None,geometry=(100,100,400,500)):
@@ -802,15 +861,15 @@ class WndPerson(WndSqlBase):
 
     fld2lbl={
       'ivcPrefix':'Anrede',
-      'ivcLstName':'Rng Vorname',
-      'ivcFstName':'Rng Name',
+      'ivcLstName':'Rng Name',
+      'ivcFstName':'Rng Vorname',
       'ivcAddress':'Rng Adresse',
       'ivcAddress1':'Rng Adresse1',
       'ivcAddress2':'Rng Adresse2',
       'zipCode':'PLZ',
       'city':'Ort',
-      'lstName':'Patient Vorname',
-      'fstName':'Patient Name',
+      'lstName':'Patient Name',
+      'fstName':'Patient Vorname',
       'phone': 'Telefon',
       'phone1':'Telefon1',
       'phone2':'Telefon2',
@@ -889,12 +948,18 @@ class WndPerson(WndSqlBase):
   def OnRptTreatmentProgress(self):
     print('OnRptTreatmentProgress')
     app=qtw.QApplication.instance()
-    curData=self.cbNaVo.currentData()
-    app.mkb.report_therapy_progress(pkPerson=curData)
+    pkPerson=self.cbNaVo.currentData()
+    if pkPerson is None:
+      MsgBox('No selected person')
+      return
+    app.mkb.report_therapy_progress(pkPerson=pkPerson)
 
   def OnWndTreatment(self):
     cb=self.cbNaVo
     pkPerson=cb.currentData()
+    if pkPerson is None:
+      MsgBox('No selected person')
+      return
     wnd=WndTreatment(fkPerson=pkPerson)
     idx=wnd.cbTrt.count()-1
     wnd.cbTrt.setCurrentIndex(idx)
@@ -908,6 +973,9 @@ class WndPerson(WndSqlBase):
   def OnWndInvoice(self):
     cb=self.cbNaVo
     pkPerson=cb.currentData()
+    if pkPerson is None:
+      MsgBox('No selected person')
+      return
     perStr=cb.currentText()
     wnd=WndInvoice(fkPerson=pkPerson)
     idx=wnd.cbIvc.count()-1
@@ -987,14 +1055,6 @@ class WndTreatment(WndSqlBase):
     loV.addLayout(loH)
 
     self.CbTrtPopulate(pkTreatment)
-    #ck=qtw.QCheckBox("no invoice",self)
-    #ck.stateChanged.connect(self.OnCkInvoice)
-    #ck.stateChanged.connect(lambda:self.OnCkInvoice(ck))
-    #loH.addWidget(ck)
-
-    self.cbIvc=cbIvc=qtw.QComboBox()
-    self.CbIvcFill(fkPerson)
-    loH.addWidget(cbIvc)
 
     for txt,func in (("Ext. Edit",self.OnWndTreatment),("Delete",self.OnDelete),("New",self.OnNew),("Save",self.OnSave)):#("Rechnungen",self.OnWndInvoice),("Report Treatment",self.OnRptTreatmentProgress)):
       btn=qtw.QPushButton(txt,self)
@@ -1054,24 +1114,6 @@ class WndTreatment(WndSqlBase):
           d=str(d)
         w.setText(d)
       self.SetChanged(False)
-
-  def CbIvcFill(self,pkPerson):
-      cbIvc=self.cbIvc
-      dbc=qtw.QApplication.instance().mkb.db.cursor()
-      cbIvc.clear()
-      itemsIvc=dbc.execute('SELECT id, dtInvoice FROM Invoice WHERE fkPerson=%s ORDER BY dtInvoice'%pkPerson).fetchall()
-      cbIvc.addItem('_not set_',None)
-      cbIvc.addItem('_no invoice_',None)
-
-      for pkIvc,datIvc in itemsIvc:
-        #cmpIvc.append(datTrt)
-        cbIvc.addItem(datIvc,pkIvc)
-        #if pkIvc==fkInvoice
-
-      self.SetChanged(False)
-
-  def OnCkInvoice(self,ck):
-    print('OnCkInvoice',ck,ck.isChecked())
 
   def OnWndTreatment(self):
     cb=self.cbTrt
@@ -1400,8 +1442,8 @@ class WndMain(qtw.QMainWindow):
     act=AddMenuAction(self,mnEdit,"Person",self.OnWndPerson,shortcut="Ctrl+A")
     act=AddMenuAction(self,mnEdit,"Quick Select Table",self.OnWndQuickSelect,shortcut="Ctrl+Q")
     mnEdit.addSeparator()
-    act=AddMenuAction(self,mnEdit,"Sync Invoice->Account",self.OnWndSyncIvcAcc)
-    act=AddMenuAction(self,mnEdit,"Import Account CSV",self.OnImportCSV,shortcut="Ctrl+S")
+    act=AddMenuAction(self,mnEdit,"Sync Invoice->Account",self.OnWndSyncIvcAcc,shortcut="Ctrl+S")
+    act=AddMenuAction(self,mnEdit,"Import Account CSV",self.OnImportCSV,shortcut="Ctrl+W")
     mnRpt=mainMenu.addMenu('&Report')
     act=AddMenuAction(self,mnRpt,"Invoices",self.OnRepInvoices)
     act=AddMenuAction(self,mnRpt,"Therapy Progress",self.OnRepTherapyProgress)
