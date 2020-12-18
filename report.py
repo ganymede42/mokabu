@@ -216,8 +216,8 @@ class Invoice():
         totSum+=tot
         #pBemerkung=
         if Bemerkung:
-          #pBemerkung=rlp.Paragraph('<font size="10">'+Bemerkung+'</font>',styN)
-          pBemerkung=rlp.Paragraph(Bemerkung,styN)
+          pBemerkung=rlp.Paragraph('<font size="9">'+Bemerkung+'</font>',styN)
+          #pBemerkung=rlp.Paragraph(Bemerkung,styN)
         else:
           pBemerkung=''
         data.append((dateconvert(datBehandlung),pBemerkung,'%.2f'%Stundenansatz,'%d Min'%Dauer,'%.2f'%tot))
@@ -225,7 +225,7 @@ class Invoice():
       pTotSum=rlp.Paragraph('<b>%.2f</b>'%totSum,styR)
       data.append(('','','','',pTotSum))
 
-      t=rlp.Table(data,colWidths=(60,160,80,60,50,))
+      t=rlp.Table(data,colWidths=(60,210,50,50,50,))
       t.hAlign='LEFT'
       t.setStyle(rlp.TableStyle([#('INNERGRID',(0,0),(-1,-1),0.25,rll.colors.black),
                                  #('BOX',(0,0),(-1,-1),0.25,rll.colors.black),

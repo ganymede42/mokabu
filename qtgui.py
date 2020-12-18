@@ -805,9 +805,18 @@ class WndSyncIvcAcc(qtw.QWidget):
       pass
 
     ctxMn=qtw.QMenu(self)
-    actFiltAll=ctxMn.addAction('filter: all treatments')
-    actFiltOpen=ctxMn.addAction('filter: open treatments')
-    actFiltFree=ctxMn.addAction('filter: free of charge')
+    actFiltAll=ctxMn.addAction('filter: all invoices')
+    actFiltOpen=ctxMn.addAction('filter: open invoices')
+    actFiltFree=ctxMn.addAction('align invoice to account')
+    actFiltFree=ctxMn.addAction('link invoice to account')
+    actFiltFree=ctxMn.addAction('unlink invoice from account')
+    #TODO: implement these functions
+    #align invoice to account is done by selecting an invoice
+    # by selecting an account if there are mote than one invoice align first to top
+    #doubleclick on invoice opens the invoice
+    #doubleclick on person opens the person
+
+
     #if idx.column()==2:
     #if fkIvc is None:
     #  ctxMn.addSeparator()
