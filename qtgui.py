@@ -543,7 +543,7 @@ class WndSyncIvcAcc(qtw.QWidget):
     loV.addLayout(loH)
 
     #Adding sql table for Incoive
-    lbl=('id','cnt','fkAcc','date','lstName','fstName','sum','comment')
+    lbl=('id','fkAcc','Datum','cnt','sum','Person','Rechnung','comment')
     self.tbIvc=tbIvc=qtw.QTableWidget(1,len(lbl))#rows cols
     tbIvc.setHorizontalHeaderLabels(lbl)
     hh=tbIvc.horizontalHeader()
@@ -551,19 +551,22 @@ class WndSyncIvcAcc(qtw.QWidget):
     vh=tbIvc.verticalHeader()
     vh.setDefaultSectionSize(20)
     #qTbl.resizeColumnsToContents()
-    width=(40,40,40,100,100,100,50,50)
+    width=(40,40,70,30,45,240,10,140)
     for i,w in enumerate(width):
       tbIvc.setColumnWidth(i,w)
     #qTbl.setFixedWidth(400)
-    tbIvc.setMinimumWidth(sum(width)+50)
+    tbIvc.setMinimumWidth(sum(width)+30)
     tbIvc.setMinimumHeight(600)
-    tbIvc.cellDoubleClicked.connect(self.OnTblDblClick)
+    #tbIvc.setSelectionMode(qtw.QAbstractItemView.SingleSelection)
+    tbIvc.itemSelectionChanged.connect(self.OnTblIvcSelChanged)
+    tbIvc.cellDoubleClicked.connect(self.OnTblIvcDblClick)
     #loF.addRow('Treatments',tbTrt)
     loH.addWidget(tbIvc)
     self.FillInvoice()
 
     #Adding sql table for Account
-    lbl=('id','date','refText','sum','fkIvc','sumIvc')
+    #lbl=('id','date','refText','sum','fkIvc','sumIvc')
+    lbl=('id','fkIvc','Datum','sum','diff','refText')
     self.tbAcc=tbAcc=qtw.QTableWidget(1,len(lbl))#rows cols
     tbAcc.setHorizontalHeaderLabels(lbl)
     hh=tbAcc.horizontalHeader()
@@ -571,13 +574,14 @@ class WndSyncIvcAcc(qtw.QWidget):
     vh=tbAcc.verticalHeader()
     vh.setDefaultSectionSize(20)
     #qTbl.resizeColumnsToContents()
-    for i,w in enumerate((40,100,240,50,40,50)):
+    width=(40,40,70,50,45,280)
+    for i,w in enumerate(width):
       tbAcc.setColumnWidth(i,w)
     #qTbl.setFixedWidth(400)
     tbAcc.setMinimumWidth(600)
     tbAcc.setMinimumHeight(600)
-    tbAcc.cellDoubleClicked.connect(self.OnTblDblClick)
-    tbAcc.itemSelectionChanged.connect(self.OnTblSelChanged)
+    #tbAcc.cellDoubleClicked.connect(self.OnTblDblClick)
+    tbAcc.itemSelectionChanged.connect(self.OnTblAccSelChanged)
 
     #loF.addRow('Treatments',tbTrt)
     loH.addWidget(tbAcc)
@@ -589,7 +593,7 @@ class WndSyncIvcAcc(qtw.QWidget):
     dbc=qtw.QApplication.instance().mkb.db.cursor()
     tbIvc=self.tbIvc
     sqlData=dbc.execute(\
-    '''SELECT iv.id,COUNT(tr.id) AS cntTrt,fkAccount,dtInvoice,ivcLstName,ivcFstName,SUM(duration*costPerHour/60) AS cost,iv.comment
+    '''SELECT iv.id,COUNT(tr.id) AS cntTrt,fkAccount,dtInvoice,ivcLstName,ivcFstName,SUM(duration*costPerHour/60) AS cost,iv.comment,lstName,fstName
        FROM Treatment tr LEFT JOIN Invoice iv  ON tr.fkInvoice=iv.id
        LEFT JOIN Person ps ON iv.fkPerson=ps.id
        WHERE iv.id NOT NULL
@@ -599,11 +603,31 @@ class WndSyncIvcAcc(qtw.QWidget):
     tbIvc.setRowCount(len(sqlData))
     self.idx2ivc=idx2ivc=list()
     self.acc2ivc=acc2ivc=dict()
+#idx2ivc table index to invoice id
+#idx2acc table index to account id
+#acc2ivc account id to set of invoices
 
+# 0 ivcId
+# 1 cntTrt
+# 2 fkAccount
+# 3 dtInvoice
+# 4 ivcLstName
+# 5 ivcFstName
+# 6 cost
+# 7 iv.comment
+# 8 lstName
+# 9 fstName
     col=qtg.QColor(196,255,196)  #qtg.QColor('yellow')
     for ir,row in enumerate(sqlData):
       pkIvc=row[0];idx2ivc.append(pkIvc)
+      cntTrt=row[1]
       fkAcc=row[2]
+      dtIvc=report.dateconvert(row[3],1)
+      ivcName=' '.join(filter(None,row[4:6]))
+      cost=row[6]
+      ivcCmt=row[7]
+      prsName=' '.join(filter(None,row[8:10]))
+      data=(pkIvc,fkAcc,dtIvc,cntTrt,cost,prsName,ivcName,ivcCmt)
       try:
         s=acc2ivc[fkAcc]
       except KeyError:
@@ -613,7 +637,7 @@ class WndSyncIvcAcc(qtw.QWidget):
         s[1]+=row[6]
       except TypeError as e:
         print('WndSyncIvcAcc:FillInvoice(1):',e)
-      for ic,data in enumerate(row[0:]):
+      for ic,data in enumerate(data):
         if data is None: strCell=''
         else: strCell=str(data)
         tw=qtw.QTableWidgetItem(strCell)
@@ -644,24 +668,28 @@ class WndSyncIvcAcc(qtw.QWidget):
     acc2ivc=self.acc2ivc
 
     col=qtg.QColor(196,255,196)  #qtg.QColor('yellow')
+    lbl=('id','fkIvc','Datum','sum','diff','refText')
 
     for ir,row in enumerate(sqlData):
       pkAcc=row[0]
+      dtEvent=report.dateconvert(row[1],1)
+      amount=row[3]
+      refText=row[2]
       idx2acc.append(pkAcc)
       try:
         ivcInfo=acc2ivc[pkAcc]
-        diff=row[-1]-ivcInfo[1]
+        diff=amount-ivcInfo[1]
         if diff==0:diff=''
-        ivcLst=(str(ivcInfo[0]).strip('{}'),diff)
+        fkIvc=str(ivcInfo[0]).strip('{}')
       except KeyError:
-        ivcLst=(None,None)
-      row=row+ivcLst
+        fkIvc=diff=None
+      row=(pkAcc,fkIvc,dtEvent,amount,diff,refText)
       for ic,data in enumerate(row):
         if data is None: strCell=''
         else: strCell=str(data)
         tw=qtw.QTableWidgetItem(strCell)
         tw.setFlags(qtc.Qt.ItemIsEnabled|qtc.Qt.ItemIsSelectable)
-        if ivcLst[0] is not None:
+        if fkIvc is not None:
           tw.setBackground(col)
 
         #if ic in (1,2: tw.setTextAlignment(qtc.Qt.AlignCenter)
@@ -671,8 +699,68 @@ class WndSyncIvcAcc(qtw.QWidget):
     tbAcc.setCurrentCell(-1,-1) #set current cell to 'invalid'
     return
 
-  def OnTblDblClick(self,row,col):
-    print('OnTblDblClick')
+  def OnTblIvcSelChanged(self):
+    print('OnTblIvcSelChanged')
+
+  def OnTblIvcDblClick(self,row,col):
+    print('OnTblIvcDblClick')
+    dbc=qtw.QApplication.instance().mkb.db.cursor()
+    idx2ivc=self.idx2ivc
+    fkIvc=idx2ivc[row]
+    sqlData=dbc.execute('SELECT iv.fkPerson FROM Invoice iv WHERE id=?',(fkIvc,)).fetchone()
+    fkPrs=sqlData[0]
+    if col in (5,6):
+      wnd=WndPerson(pkPerson=fkPrs)
+    else:
+      wnd=WndInvoice(fkPerson=fkPrs,pkInvoice=fkIvc)
+    sub=qtw.QMdiSubWindow()
+    sub.setWidget(wnd)
+    #sub.setWindowTitle("subwindow"+str(MainWindow.count))
+    self.parent().parent().parent().parent().mdi.addSubWindow(sub)
+    sub.show()
+
+  def OnTblAccSelChanged(self):
+    print('OnTblAccSelChanged')
+    col=qtg.QColor(32,255,32)  #qtg.QColor('yellow')
+    tbIvc=self.tbIvc
+    tbAcc=self.tbAcc
+    rwAcc=tbAcc.currentRow()
+
+    idx2acc=self.idx2acc
+    idx2ivc=self.idx2ivc
+    acc2ivc=self.acc2ivc
+
+    #unhighlight
+    try:
+      lstPkIvc=self.lstIvcHighlight
+    except AttributeError:
+      pass
+    else:
+      col=qtg.QColor(192,255,192)  #qtg.QColor('yellow')
+      for pkIvc in lstPkIvc:
+        idxIvc=idx2ivc.index(pkIvc)
+        for i in range(tbIvc.columnCount()):
+          tbIvc.item(idxIvc,i).setBackground(col)
+
+    #highlight
+    col=qtg.QColor(32,255,32)  #qtg.QColor('yellow')
+    pkAcc=idx2acc[rwAcc]
+    try:
+      self.lstIvcHighlight=lstPkIvc=acc2ivc[pkAcc][0]
+    except KeyError:
+      pass
+    else:
+      for pkIvc in lstPkIvc:
+        idxIvc=idx2ivc.index(pkIvc)
+        item = self.tbIvc.item(idxIvc, 0)
+        #self.tbIvc.scrollToItem(item, hint=qtg.QAbstractItemView.PositionAtCenter)
+        self.tbIvc.scrollToItem(item)
+        for i in range(tbIvc.columnCount()):
+          tbIvc.item(idxIvc,i).setBackground(col)
+
+
+  def LinkAccIvc(self,link=True):
+    print('OnLinkAccIvc')
     tbIvc=self.tbIvc
     tbAcc=self.tbAcc
     acc2ivc=self.acc2ivc
@@ -745,45 +833,9 @@ class WndSyncIvcAcc(qtw.QWidget):
 
     return
 
-  def OnTblSelChanged(self):
-    print('OnTblSelChanged')
-    col=qtg.QColor(32,255,32)  #qtg.QColor('yellow')
-    tbIvc=self.tbIvc
-    tbAcc=self.tbAcc
-    rwAcc=tbAcc.currentRow()
-
-    idx2acc=self.idx2acc
-    idx2ivc=self.idx2ivc
-    acc2ivc=self.acc2ivc
-
-    #unhighlight
-    try:
-      lstPkIvc=self.lstIvcHighlight
-    except AttributeError:
-      pass
-    else:
-      col=qtg.QColor(192,255,192)  #qtg.QColor('yellow')
-      for pkIvc in lstPkIvc:
-        idxIvc=idx2ivc.index(pkIvc)
-        for i in range(tbIvc.columnCount()):
-          tbIvc.item(idxIvc,i).setBackground(col)
-
-    col=qtg.QColor(32,255,32)  #qtg.QColor('yellow')
-    pkAcc=idx2acc[rwAcc]
-    try:
-      self.lstIvcHighlight=lstPkIvc=acc2ivc[pkAcc][0]
-    except KeyError:
-      pass
-    else:
-      for pkIvc in lstPkIvc:
-        idxIvc=idx2ivc.index(pkIvc)
-        for i in range(tbIvc.columnCount()):
-          tbIvc.item(idxIvc,i).setBackground(col)
-
   def contextMenuEvent(self, event):
     pos=event.pos()
     cld=self.childAt(pos)
-
     if not cld: return
     tbl=cld.parent()
     if tbl==self.tbIvc:
@@ -792,24 +844,40 @@ class WndSyncIvcAcc(qtw.QWidget):
       mode=1
     else:
       return
+
     pos=pos-tbl.pos()
     item=tbl.itemAt(pos)
     idx=tbl.indexFromItem(item)
+
+    ctxMn=qtw.QMenu(self)
+    actFiltAll=ctxMn.addAction('filter: all invoices')
+    actFiltOpen=ctxMn.addAction('filter: open invoices')
+
+    actFiltUnLink=actFiltLink=actFiltAlign=None
+
     if mode==0:
-      #idx2ref=self.idx2refIvc
-      #fkPrs,pkTrt,fkIvc=idx2ref[idx.row()]
+      #idx2acc=self.idx2acc
+      idx2ivc=self.idx2ivc
+      #acc2ivc=self.acc2ivc
+      row=idx.row()-1
+      fkIvc=idx2ivc[row]
+      db=qtw.QApplication.instance().mkb.db
+      dbc=db.cursor()
+      sqlData=dbc.execute('SELECT fkPerson,fkAccount FROM Invoice iv WHERE id=?',(fkIvc,)).fetchone()
+      fkPrs,fkAcc=sqlData
+      actFiltAlign=ctxMn.addAction('align invoice to account')
+      rwAcc=self.tbAcc.currentRow()
+      if rwAcc>0:
+        pkAcc=self.idx2acc[rwAcc]
+        actFiltLink=ctxMn.addAction('link invoice to account %d'%pkAcc)
+      if fkAcc is not None:
+        actFiltUnLink=ctxMn.addAction('unlink invoice from account %d'%fkAcc)
       pass
     else: # tb==1
       #idx2ref=self.idx2refAcc
       #fkPrs,pkTrt,fkIvc=idx2ref[idx.row()]
       pass
 
-    ctxMn=qtw.QMenu(self)
-    actFiltAll=ctxMn.addAction('filter: all invoices')
-    actFiltOpen=ctxMn.addAction('filter: open invoices')
-    actFiltFree=ctxMn.addAction('align invoice to account')
-    actFiltFree=ctxMn.addAction('link invoice to account')
-    actFiltFree=ctxMn.addAction('unlink invoice from account')
     #TODO: implement these functions
     #align invoice to account is done by selecting an invoice
     # by selecting an account if there are mote than one invoice align first to top
@@ -827,9 +895,15 @@ class WndSyncIvcAcc(qtw.QWidget):
     #  actIvcCharge=ctxMn.addAction('set to: invoice')
 
     action=ctxMn.exec_(self.mapToGlobal(event.pos()))
-    #if not action:
-    #  return
-    #if action==actFiltAll:
+    if not action:
+      return
+
+    if action==actFiltUnLink:
+      self.LinkAccIvc(True)
+    elif action==actFiltLink:
+      self.LinkAccIvc(False)
+    #elif action==:
+    #elif action==:
     #  self.filtMode=0
     #elif action==actFiltOpen:
     #  self.filtMode=1
@@ -847,6 +921,7 @@ class WndSyncIvcAcc(qtw.QWidget):
     #elif fkIvc==-1:
     #  if action==actIvcCharge:
     #    self.SetPkTreatmentFkInvoice(pkTrt,None)
+    #    self.OnLinkAccIvc(fkIvc,link=true/false)
     #self.populate()
 
 class WndPerson(WndSqlBase):
