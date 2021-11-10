@@ -68,7 +68,7 @@ class Couvert():
     Dr. phil., Fachpsychologin<br/>
     für Kinder- & Jugendpsychologie FSP<br/>
     eidg. anerkannte Psychotherapeutin.<br/>
-    Albisstrasse 11 · 8038 Zürich · +41 76 335 72 79<br/></font>
+    Weihermattstrasse 11a · 5242 Birr<br/></font>
     <font size="8">monika.kast-perry@psychologie.ch<br/>
     praxis-weiterkommen.com</font>'''
     story.append(rlp.Paragraph(txt,styR))
@@ -131,7 +131,7 @@ class Invoice():
     Dr. phil., Fachpsychologin<br/>
     für Kinder- & Jugendpsychologie FSP<br/>
     eidg. anerkannte Psychotherapeutin.<br/>
-    Albisstrasse 11 · 8038 Zürich · +41 76 335 72 79<br/>
+    Weihermattstrasse 11a · 5242 Birr · +41 76 335 72 79<br/>
     monika.kast-perry@psychologie.ch · praxis-weiterkommen.com</font>'''
     story.append(rlp.Paragraph(txt,styR))
     story.append(rlp.Spacer(1,-24))
@@ -145,7 +145,7 @@ class Invoice():
     txt+='%s %s<br/>'''%tuple(map(lambda x: x if x else '',klient[6:8]))
     story.append(rlp.Paragraph(txt,styN))
     story.append(rlp.Spacer(1,24+24))
-    txt='Zürich, %s'%dateconvert(datRng)
+    txt='Birr, %s'%dateconvert(datRng)
     story.append(rlp.Paragraph(txt,styN))
     story.append(rlp.Spacer(1,12))
 
@@ -241,8 +241,8 @@ class Invoice():
     <br/>
     Monika Kast Perry<br/>
     Praxis weiterkommen<br/>
-    Albisstrasse 11<br/>
-    8038 Zürich'''%totSum
+    Weihermattstrasse 11a<br/>
+    5242 Birr'''%totSum
     story.append(rlp.Spacer(1,12))
     story.append(rlp.Paragraph(txt,styN))
     txt='''Herzlichen Dank und liebe Grüsse'''
@@ -261,7 +261,7 @@ class Invoice():
     frm.addFromList(story,canvas)
 
     if tplQR:
-      fmt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis Weiterkommen Monika Kast Perry\nAlbisstrasse 11\n\n8038\nZürich\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\nS\n\n\n\n\n\n\nNON\n\n%s\nEPD'''
+      fmt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis Weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\nS\n\n\n\n\n\n\nNON\n\n%s\nEPD'''
       txt=fmt%(totSum,dateconvert(datRng)+' '+klient[8]+' '+klient[9])
       #https://www.reportlab.com/docs/reportlab-graphics-reference.pdf
       #https://www.paymentstandards.ch/dam/downloads/ig-qr-bill-de.pdf
@@ -524,9 +524,9 @@ def test1(fn):
 
 def testBarcode():
   #/home/zamofing_t/Documents/prj/Mokabu/scratch/reportlab/tests/test_graphics_barcode.py
-  txt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nAlbisstrasse 11\n\n8038\nZürich\nCH\n\n\n\n\n\n\n\n\nCHF\n\n\n\n\n\n\n\nNON\n\n\nEPD'''
-  txt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nAlbisstrasse 11\n\n8038\nZürich\nCH\n\n\n\n\n\n\n\n1234.00\nCHF\nS\nPersZahlung\nStrasseZahlung\n\n5430\nWettingen\nCH\nNON\n\nMitteilung\nEPD'''
-  fmt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nAlbisstrasse 11\n\n8038\nZürich\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\nS\n\n\n\n\n\n\nNON\n\n%s\nEPD'''
+  txt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n\nCHF\n\n\n\n\n\n\n\nNON\n\n\nEPD'''
+  txt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n1234.00\nCHF\nS\nPersZahlung\nStrasseZahlung\n\n5430\nWettingen\nCH\nNON\n\nMitteilung\nEPD'''
+  fmt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\nS\n\n\n\n\n\n\nNON\n\n%s\nEPD'''
   txt=fmt%(1234,'Mitteilung')
   #https://www.paymentstandards.ch/dam/downloads/ig-qr-bill-de.pdf
   #https://de.wikipedia.org/wiki/QR-Rechnung
