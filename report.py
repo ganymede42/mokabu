@@ -261,7 +261,7 @@ class Invoice():
     frm.addFromList(story,canvas)
 
     if tplQR:
-      fmt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis Weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\nS\n\n\n\n\n\n\nNON\n\n%s\nEPD'''
+      fmt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis Weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\n\n\n\n\n\n\n\nNON\n\n%s\nEPD'''
       txt=fmt%(totSum,dateconvert(datRng)+' '+klient[8]+' '+klient[9])
       #https://www.reportlab.com/docs/reportlab-graphics-reference.pdf
       #https://www.paymentstandards.ch/dam/downloads/ig-qr-bill-de.pdf
