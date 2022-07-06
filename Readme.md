@@ -21,11 +21,12 @@ Button Report Treatment -> gesammter Therapieverlauf der aktuellen Person -> the
 
 Die Art wie eine Rechnung ausgedruckt wird, kann mit <tplInvoice veränder werden.
 Es ist ein 'Bitfeld und ist eine Summe folgender Zahlen:
- 0: nichts spezielles
-+1: Zahlungserinnerung
-+2: 2. Mahnung
-+4: Rechnung für IV
-+8: QR-Code
+ 0 : nichts spezielles
++1 : Zahlungserinnerung
++2 : 2. Mahnung
++4 : Rechnung für IV
++8 : QR-Code
++16: Offizielles Format mit Tarifziffer
 
 -> 4+8=12 -> IV-Rechnung mit QR-Code
 default is 4.
