@@ -96,7 +96,8 @@ class MoKaBu:
       dbcBeh=dbcBeh.execute(sqlBeh)
       dBeh=dbcBeh.fetchall()
       print(dBeh)
-      repIvc.add(recRng[3:],recRng[1],recRng[2],dBeh)#  add(klient,tplID,datRng,behandlungen):
+      #repIvc.add(recRng[3:], recRng[1], recRng[2], dBeh)  # add(klient,tplID,datRng,behandlungen):
+      repIvc.build(recRng[1],'MK_A',recRng[3:], (recRng[0],recRng[2]),dBeh)#  add(klient,tplID,datRng,behandlungen):
 
     repIvc.publish()
     report.default_app_open(fn);

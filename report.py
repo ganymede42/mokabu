@@ -1,4 +1,33 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
+# *-----------------------------------------------------------------------*
+# |                                                                       |
+# |  Copyright (c) 2022 by Thierry Zamofing  (th.zamofing@gmail.com)      |
+# |                                                                       |
+# *-----------------------------------------------------------------------*
+'''
+Mokabu report generator
+
+bitmask for mode:
+  0x01: testInvoice
+  0x02: testTherapyProgress
+  0x04: testBarcode
+  0x08: Couvert
+
+  Invoice tplID bit mask
+  0b0000 0011: (2 bit)
+              0: Normal
+              1: 1. Mahnung
+              2: 2. Mahnung
+  0b0000 0100: (unused)
+  0b0000 1000: QR-Code
+  0b0011 0000: (2 bit) Format
+  0x1c        0: Normal
+              1: IV mit Tarifziffer
+              2: Offizielles Format mit Tarifziffer etc.
+'''
+import logging
+_log=logging.getLogger(__name__)
+
 import time,os,platform,re,sys
 import subprocess as spc
 import reportlab as rl
@@ -12,6 +41,8 @@ import reportlab.lib.pagesizes as rlps
 import reportlab.pdfgen as rlpg
 import reportlab.pdfbase as rlpb
 import reportlab.pdfbase.ttfonts #else not visible
+
+from TarZif import Lut
 
 def default_app_open(file):
   if platform.system() == 'Darwin':       # macOS
@@ -77,9 +108,11 @@ class Couvert():
     canvas.save()
 
 
+
 class Invoice():
 
   def __init__(self,fn='invoice.pdf'):
+    self._lut=Lut()
     #dimension by default 1/72 inch
     self.canvas=canvas=rlpg.canvas.Canvas(fn,pagesize=rlps.A4)
     self.styles=styles=rls.getSampleStyleSheet()
@@ -87,8 +120,20 @@ class Invoice():
     styles.add(rls.ParagraphStyle(name='Right', alignment=rle.TA_RIGHT))
     styles.add(rls.ParagraphStyle(name='Center', alignment=rle.TA_CENTER))
 
+  def build(self,tplID,lstErb,klient,rng,behandlungen):
+    #lstErb Leistungserbringer
+    self._lstErb=self._lut.lst_erb(lstErb)
 
-  def addTarZifFmt(self,klient,tplID,datRng,behandlungen):
+    if tplID==None:tplID=0x08
+
+    fmt=(tplID>>4)&0x3
+    if fmt in (0,1):
+      self.buildOrig(tplID,klient,rng[1],behandlungen)
+    if fmt==2:
+      self.buildTarZif(tplID,klient,rng,behandlungen)
+    self.canvas.showPage()
+
+  def buildTarZif(self,tplID,klient,rng,beh):
     canvas=self.canvas
     styles=self.styles
     styN=styles['Normal']
@@ -108,8 +153,8 @@ class Invoice():
 
 
 
-    #frm=rlp.Frame(brd[0],brd[3],sz[0]-brd[0]-brd[1],sz[1]-brd[2]-brd[3],showBoundary=0)
-    frm=rlp.Frame(brd[0],brd[3],sz[0]-brd[0]-brd[1],sz[1]-brd[2]-brd[3],showBoundary=1)
+    frm=rlp.Frame(brd[0],brd[3],sz[0]-brd[0]-brd[1],sz[1]-brd[2]-brd[3],showBoundary=0)
+    #frm=rlp.Frame(brd[0],brd[3],sz[0]-brd[0]-brd[1],sz[1]-brd[2]-brd[3],showBoundary=1)
 
     story=[]
 
@@ -119,142 +164,136 @@ class Invoice():
                              ('TOPPADDING',(0,0), (-1,-1),0),
                              ('BOTTOMPADDING',(0,0), (-1,-1),0),
                              ])
-
-    data=[('Dokument','Identifikation','1470990626','13.10.2019 18:17:06','Seite 1',)]
-    t=rlp.Table(data,colWidths=(60,80,80,200,50,))
+    datRng=time.strptime(rng[1],'%Y-%m-%d')
+    #time.mktime(time.gmtime(time.time()))
+    id=int(time.mktime(datRng))+rng[0]
+    data=[('Dokument','Identifikation',str(id),time.strftime('%d.%m.%Y %H:%M:%S',datRng),'Seite 1',)]
+    t=rlp.Table(data,colWidths=(60,60,70,270,50,)) #sum=510
     t.hAlign='LEFT'
     t.setStyle(tblStyle)
     story.append(t)
 
-    data=[('Rechnungs-','GLN-Nr. (B)','','Monika Kast','E-mail:','email@email.ch'),
-          ('steller',   'ZSR-Nr. (B)','ZSR2345','Weihermattstrasse 11a 5242 Birr','Tel:','076 339 91 48'),
-          ('Leistungs-','GLN-Nr. (B)','','Monika Kast','E-mail:','email@email.ch'),
-          ('erbringer', 'ZSR-Nr. (B)','ZSR2345','Weihermattstrasse 11a 5242 Birr','Tel:','076 339 91 48')      ]
-    t=rlp.Table(data,colWidths=(60,80,80,80,80,50,))
+    lstErb=self._lstErb
+    vorname=lstErb['vorname']
+    name=lstErb['name']
+    email=lstErb['email']
+    tel=lstErb['telM']
+    adr=lstErb['adr']
+    plz=lstErb['plz']
+    ort=lstErb['ort']
+    qrFmt=lstErb['qrFmt']
+    GLN=str(lstErb['GLN'])
+    UID=lstErb['UID']
+    ZSR=lstErb['ZSR']
+
+    data=[('Rechnungs-','GLN-Nr. (B)',GLN,f'{vorname} {name}', 'E-mail:',email),
+          ('steller',   'ZSR-Nr. (B)',ZSR,f'{adr} {plz} {ort}','Tel:',   tel),
+          ('Leistungs-','GLN-Nr. (B)',GLN,f'{vorname} {name}', 'E-mail:',email),
+          ('erbringer', 'ZSR-Nr. (B)',ZSR,f'{adr} {plz} {ort}','Tel:',   tel)]
+    t=rlp.Table(data,colWidths=(60,60,70,140,40,140,))
+    tblStyle=rlp.TableStyle([#('INNERGRID',(0,0),(-1,-1),0.15,rll.colors.black),
+                             ('BOX',(0,0),(-1,-1),0.15,rll.colors.black),
+                             ('FONTSIZE',(0,0), (-1,-1),8),
+                             ('TOPPADDING',(0,0), (-1,-1),0),
+                             ('BOTTOMPADDING',(0,0), (-1,-1),0),
+                             ])
+
     t.hAlign='LEFT'
     t.setStyle(tblStyle)
     story.append(t)
+
+    rAnr,rNa,rVo,rAdr,rAdr2,rAdr3,rPlz,rOrt,kNa,kVo,kGeb,kAhv=klient
+    try:
+      kGeb=time.strptime(kGeb,'%Y-%m-%d')
+      kGeb=time.strftime('%d.%m.%Y',kGeb)
+    except:
+      kGeb=''
+
+
+
 
     data=[
-    ('Patient/Klient-','Name'             ,'xxx',''                   ,''),
-    (''               ,'Vorname'          ,'xxx',''                   ,''),
-    (''               ,'Strasse'          ,'xxx',''                   ,''),
-    (''               ,'PLZ'              ,'xxx',''                   ,''),
-    (''               ,'Ort'              ,'xxx',''                   ,''),
-    (''               ,'Vorname'          ,'xxx',''                   ,''),
-    (''               ,'Geburtsdatum'     ,'xxx',''                   ,''),
-    (''               ,'Geschlecht'       ,'xxx',''                   ,''),
-    (''               ,'Falldatum'        ,'xxx',''                   ,''),
-    (''               ,'Patienten-Nr'     ,'xxx',''                   ,''),
-    (''               ,'VEKA-Nr'          ,'xxx',''                   ,''),
-    (''               ,'Kanton'           ,'xxx',''                   ,''),
-    (''               ,'Kopie'            ,'xxx',''                   ,''),
-    (''               ,'Vergütungsart'    ,'xxx','KoGu-Datum/Nr.'     ,''),
-    (''               ,'Vertrags-Nr'      ,'xxx','Rechnungs-Datum/Nr.',''),
-    (''               ,'Behandlung'       ,'xxx','Behandlungsgrund'   ,''),
-    (''               ,'Rolle'            ,'xxx',''                   ,''),
-    (''               ,'Betriebs-Nr./Name','xxx',''                   ,''),
-    ('Zuweiser'       ,'GLN-/ZSR-Nr.'     ,'xxx',''                   ,''),
+    ('Patient/Klient-','Name'             ,kNa,),
+    (''               ,'Vorname'          ,kVo,),
+    (''               ,'Strasse'          ,rAdr),
+    (''               ,'PLZ'              ,rPlz),
+    (''               ,'Ort'              ,rOrt),
+    (''               ,'Geburtsdatum'     ,kGeb),
+    (''               ,'AHV-Nr'           ,kAhv,),
+    #(''               ,'Geschlecht'      ,''),
+    #(''               ,'Falldatum'       ,'xxx'),
+    #(''               ,'Patienten-Nr'    ,'xxx'),
+    #(''               ,'VEKA-Nr'          ,'xxx',''                   ,''),
+    #(''               ,'Kanton'           ,'xxx',''                   ,''),
+    #(''               ,'Kopie'            ,'xxx',''                   ,''),
+    #(''               ,'Vergütungsart'    ,'xxx','KoGu-Datum/Nr.'     ,''),
+    #(''               ,'Vertrags-Nr'      ,'xxx','Rechnungs-Datum/Nr.',''),
+    #(''               ,'Behandlung'       ,'xxx','Behandlungsgrund'   ,''),
+    #(''               ,'Rolle'            ,'xxx',''                   ,''),
+    #(''               ,'Betriebs-Nr./Name','xxx',''                   ,''),
+    #('Zuweiser'       ,'GLN-/ZSR-Nr.'     ,'xxx',''                   ,''),
                     ]
-    t=rlp.Table(data,colWidths=(60,80,80,80,80,))
+    t=rlp.Table(data,colWidths=(60,60,390))
     t.hAlign='LEFT'
     t.setStyle(tblStyle)
     story.append(t)
 
+    story.append(rlp.Spacer(1,40))
 
 
-
-
-    data=[('Datum','Tarif','Tarifziffer','Inhalt',rlp.Paragraph('Anzahl a 15min',styR),'Kosten',)]
-
-    t=rlp.Table(data,colWidths=(60,40,60,200,50,50,))
-    t.hAlign='LEFT'
-    t.setStyle(rlp.TableStyle([#('INNERGRID',(0,0),(-1,-1),0.15,rll.colors.black),
-                               ('BOX',(0,0),(-1,-1),0.15,rll.colors.black),
-                               ('ALIGN',(0,0),(0,-1),'RIGHT'),
-                               ('ALIGN',(1,0),(2,-1),'RIGHT'),
-                               ('ALIGN',(4,0),(4,-1),'CENTER'),
-                               ('ALIGN',(5,0),(5,-1),'RIGHT'),
-                               ('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black)]))
-
-    story.append(t)
-    story.append(t)
-
-
-
-    story.append(rlp.Spacer(1,12))
-    txt='''<font size="7"><b>Monika Kast Perry</b><br/>
-    TARZIF TPL Dr. phil., Fachpsychologin<br/>
-    für Kinder- & Jugendpsychologie FSP<br/>
-    eidg. anerkannte Psychotherapeutin.<br/>
-    Weihermattstrasse 11a · 5242 Birr · +41 76 335 72 79<br/>
-    monika.kast-perry@psychologie.ch · praxis-weiterkommen.com</font>'''
-    story.append(rlp.Paragraph(txt,styR))
-    story.append(rlp.Spacer(1,-24))
-    txt='''
-    %s<br/>
-    %s %s<br/>'''%tuple(map(lambda x: x if x else '',klient[0:3]))
-    for i in range(3,6):
-      adr=klient[i]
-      if adr: # not None and not empty
-        txt+=adr+'<br/>'
-    txt+='%s %s<br/>'''%tuple(map(lambda x: x if x else '',klient[6:8]))
-    story.append(rlp.Paragraph(txt,styN))
-    story.append(rlp.Spacer(1,24+24))
-    txt='Birr, %s'%dateconvert(datRng)
-    story.append(rlp.Paragraph(txt,styN))
-    story.append(rlp.Spacer(1,12))
-
-    txt='<b>Rechnung für</b>'
-
-    txt+='<br/><br/><b>%s %s'%(klient[8:10])
-
-    geb=klient[10]
-    ahvOrt=klient[11]
-    if ahvOrt:
-      ahvOrt=ahvOrt.split(maxsplit=1)
-      if len(ahvOrt)==1:
-        ahvOrt.append(None)
-      ahv,ort=ahvOrt
-    else:
-      ahv=ort=None
-
-    txt+=', '+ort
-    if geb is not None: txt+=', geb: %s'%dateconvert(geb)
-    if ahv is not None: txt+=', AHV-Nr: %s'%ahv
-    txt+='</b>'
-    story.append(rlp.Paragraph(txt,styJ))
-
-    story.append(rlp.Spacer(1,12))
-
-    data=[('Datum','Tarif','Tarifziffer','Inhalt',rlp.Paragraph('Anzahl a 15min',styR),'Kosten',)]
+    data=[('Datum','Tarif','Tarifziffer','Anzahl','TP TL','Betrag',)]
     totSum=0.
-    for datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif in behandlungen:
+    lut=self._lut
+    ts=[  # ('INNERGRID',(0,0),(-1,-1),0.15,rll.colors.black),
+      ('FONTSIZE', (0, 0), (-1, -1), 8),
+      ('TOPPADDING', (0, 0), (-1, -1), 0),
+      ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+      ('BOX', (0, 1), (-1, -1), 0.15, rll.colors.black),
+      ('BOX', (0, -1), (-1, -1), 0.15, rll.colors.black),
+      ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+      ('ALIGN', (1, 0), (2, -1), 'RIGHT'),
+      ('ALIGN', (4, 0), (4, -1), 'CENTER'),
+      ('ALIGN', (5, 0), (5, -1), 'RIGHT'),
+      # ('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black),
+    ]
+
+    i=2
+    for datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif in beh:
       if Stundenansatz is None: Stundenansatz=0
       if Dauer is None: Dauer=0
-      if TarZif is None:TarZif=''
-      tot=Stundenansatz*Dauer/60
-      totSum+=tot
-      #pBemerkung=
-      if Bemerkung:
-        pBemerkung=rlp.Paragraph('<font size="8">'+Bemerkung+'</font>',styN)
-      else:
+      if TarZif is None:
+        TarZif='PA010'
+        _log.warning(f'No TarifZiffer -> use default :{TarZif}')
+      anz=Dauer
+      try:
+        tz=lut.tar_zif(TarZif)
+      except:
+        _log.error(f'Wrong TarifZiffer:{TarZif}')
+        tptl=Stundenansatz/60
         pBemerkung=''
-      #data.append((dateconvert(datBehandlung),'%.2f'%Stundenansatz,'%d Min'%Dauer,pBemerkung,TarZif,'%.2f'%tot))
-      data.append((dateconvert(datBehandlung),TarZif.split('.')[0],TarZif, pBemerkung, '%g'%(Dauer),'%.2f'%tot))
+      else:
+        pBemerkung=rlp.Paragraph('<font size="8"><b>'+tz[1]+'</b></font>',styN)
+        tptl=tz[0]
+      tot=anz*tptl
+      totSum+=tot
+      #if Bemerkung:
+      #  pBemerkung=rlp.Paragraph('<font size="8">'+Bemerkung+'</font>',styN)
+      #else:
+      #  pBemerkung=''
+      #data.append((dateconvert(datBehandlung), TarZif.split('.')[0], TarZif, Dauer, '%g'%(Dauer), '%.2f'%tot))
+      data.append((dateconvert(datBehandlung), TarZif.split('.')[0], TarZif, '%g'%(Dauer), tz[0], '%.2f'%tot))
+      data.append(('', pBemerkung,'','','',''))
+      ts.append(('SPAN', (1, i), (-1, i)))
+      i+=2
+
+
     #pTotSum='%.2f'%totSum
     pTotSum=rlp.Paragraph('<b>%.2f</b>'%totSum,styR)
     data.append(('','','','','',pTotSum))
 
-    t=rlp.Table(data,colWidths=(60,40,60,200,50,50,))
+    t=rlp.Table(data,colWidths=(60,40,60,50,50,250,))
     t.hAlign='LEFT'
-    t.setStyle(rlp.TableStyle([#('INNERGRID',(0,0),(-1,-1),0.15,rll.colors.black),
-                               ('BOX',(0,0),(-1,-1),0.15,rll.colors.black),
-                               ('ALIGN',(0,0),(0,-1),'RIGHT'),
-                               ('ALIGN',(1,0),(2,-1),'RIGHT'),
-                               ('ALIGN',(4,0),(4,-1),'CENTER'),
-                               ('ALIGN',(5,0),(5,-1),'RIGHT'),
-                               ('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black)]))
+    t.setStyle(rlp.TableStyle(ts))
 
     story.append(t)
 
@@ -279,32 +318,31 @@ class Invoice():
     txt='''Monika Kast Perry'''
     story.append(rlp.Paragraph(txt,styC))
     story.append(rlp.Spacer(1,12))
-    txt='PS: Es kann über die Zusatzversicherung Ihrer Krankenkasse abgerechnet werden.'
-    story.append(rlp.Paragraph(txt,styJ))
+
+    if (tplID)&0x8:
+      txt=lstErb['qrFmt']%(totSum,dateconvert(datRng)+' '+klient[8]+' '+klient[9])
+      from reportlab.graphics.shapes import Drawing
+      from reportlab.graphics.barcode import getCodes
+      outDir='/tmp/barcode'
+      os.makedirs(outDir,exist_ok=True)
+      w=getCodes()['QR'](txt)
+      w.barWidth=96
+      w.barHeight=96
+      g=w.draw()
+      #canvas.drawImage(...)
+      x0,y0,x1,y1=w.getBounds()
+      drw=Drawing(x1-x0,y1-y0)
+      drw.add(w)
+      x=16*rlu.cm;y=1.8*rlu.cm
+      drw.drawOn(canvas,x,y)
+      canvas.setFont("Helvetica", 8)
+      canvas.drawCentredString(x+1.7*rlu.cm,y-.1*rlu.cm,'QR-Rechnung')
+
+
+
     frm.addFromList(story,canvas)
 
-
-    canvas.showPage()
-
-
-  def add(self,klient,tplID,datRng,behandlungen):
-    #Vorlagen:
-    #Mahnungen nicht IV
-    #/media/zamofing_t/DataHD/Praxis/KlientenMerge/all/Viehweg Lina/Rechnung_20200717.docx
-    #/media/zamofing_t/DataHD/Praxis/KlientenMerge/all/Viehweg Lina/Zahlungserinnerung_Rechnung_20200717.docx
-    #/media/zamofing_t/DataHD/Praxis/KlientenMerge/all/Viehweg Lina/zweite Mahnung_Rechnung_20200717.docx
-    #/media/zamofing_t/DataHD/Praxis/KlientenMerge/all/Osei Lawrence/Rechnung mit Tarifziffern_20200924.docx
-    #tplID&0x3:    2 Bit
-    # 0: Normal
-    # 1: 1. Mahnung
-    # 2: 2. Mahnung
-    #(tplID>>2)&0x1:
-    # 0: Normal
-    # 1: IV mit Tarifziffer
-    if tplID&0x10:
-      self.addTarZifFmt(klient,tplID,datRng,behandlungen)
-
-    if tplID==None:tplID=0x8
+  def buildOrig(self,tplID,klient,datRng,behandlungen):
     tplMahnung=tplID&0x3
     tplIV=(tplID)&0x4
     tplQR=(tplID)&0x8
@@ -487,19 +525,6 @@ class Invoice():
       canvas.setFont("Helvetica", 8)
       canvas.drawCentredString(x+1.7*rlu.cm,y-.1*rlu.cm,'QR-Rechnung')
 
-      #brd=(1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm)  #l,r,t,b
-      #l=brd[0];
-      #r=sz[0]-brd[1];
-      #t=sz[1]-brd[2];
-      #b=brd[3]
-
-      #story.append(drw)
-      #drw.save(formats=('gif',),outDir=outDir,fnRoot='QR')
-      #canvas.line(l,b,r,b)
-      #print('gen '+outDir+'/QR.gif')
-      #os.system('firefox '+outDir+'/QR.gif')
-
-    canvas.showPage()
 
   def publish(self):
     self.canvas.save()
@@ -771,10 +796,10 @@ if __name__ == '__main__':
     lstTpl=\
       (None,8,9,10,12)
       #(None,0,1,2,4,8)
-    lstDatRng=\
-      (('2020-03-17'),('2020-06-26'),)
+    lstRng=\
+      ((123,'2020-03-17'),(145,'2020-06-26'),)
     lstBeh=\
-        ((('2020-05-15', 142.0, 60.0, 'Bemerkung 1', '752.34'),
+        ((('2020-05-15', 142.0, 60.0, 'Bemerkung 1', 'PA010'),
           ('2020-05-22', 142.0, 60.0, 'Bemerkung 2', '752.35'),
           ('2020-05-29', 142.0, 60.0, 'Bemerkung 3', '752.36'),
           ('2020-06-03', 142.0, 60.0, 'Bemerkung 4', '752.37'),
@@ -794,7 +819,10 @@ if __name__ == '__main__':
     #for i in range(len(lstTpl)):
     #  rep.add(lstKlient[0],lstTpl[i],lstDatRng[0],lstBeh[0])
 
-    rep.add(lstKlient[0],16,lstDatRng[0],lstBeh[0])
+    #build(self, tplID, lstErb, klient, datRng, behandlungen):
+    #rep.build(0x28,'MK_A',lstKlient[0],lstRng[0],lstBeh[0])
+    rep.build(0x8,'MK_A',lstKlient[0],lstRng[0],lstBeh[0])
+
 
     rep.publish()
 
@@ -816,8 +844,12 @@ if __name__ == '__main__':
 
 
   import argparse
-  parser = argparse.ArgumentParser()
-  parser.add_argument('-m', '--mode', type=int, help='mode bits', default=0xff)
+  logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(module)s:%(lineno)d:%(funcName)s:%(message)s ')
+  #(h, t)=os.path.split(sys.argv[0]);cmd='\n  '+(t if len(h)>20 else sys.argv[0])+' '
+  #exampleCmd=('', '-m0xf -v0')
+  epilog=__doc__ #+'\nExamples:'+''.join(map(lambda s:cmd+s, exampleCmd))+'\n'
+  parser=argparse.ArgumentParser(epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
+  parser.add_argument("-m", "--mode", type=lambda x: int(x,0), help="mode (see bitmasks) default=0x%(default)x", default=0xff)
   args = parser.parse_args()
   print(args)
 
