@@ -21,9 +21,9 @@ lutLstErb={
     'name': 'Kast Perry',
     'email': 'monika.kast-perry@psychologie.ch',
     'telM': '+41 76 335 72 79',
-    'adr': 'Weihermattstrasse 11a',
-    'plz':'5242',
-    'ort': 'Birr',
+    'adr': 'Riedthofstrasse 100',
+    'plz':'8105',
+    'ort': 'Regensdorf',
     'qrFmt':'SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis Weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\n\n\n\n\n\n\n\nNON\n\n%s\nEPD',
     'GLN':7601007566037,
     'UID': 'CHE327073453',
@@ -31,7 +31,7 @@ lutLstErb={
   }
 }
 
-rawTxt='''
+rawTxt='''\
 PA	"Therapieleistungen in Anwesenheit des Patienten (gemäss Art. 11b Abs. 1 lit. a KLV)"	Regulär angeordnete Psychotherapie. Anordnung von maximal 15 Therapiesitzungen durch Ärzte oder Ärztinnen der Grundversorgung sowie der psychiatrischen und psychosomatischen Versorgung. Für die Weiterführung der Psychotherapie nach kumuliert 30 Sitzungen ist vor Einreichung des Berichts mit einem Vorschlag zur Fortsetzung der Therapie eine Fallbeurteilung durch Fachärzte oder Fachärztinnen mit den Weiterbildungstiteln Psychiatrie und Psychotherapie oder Kinder- und Jugendpsychiatrie und -psychotherapie erforderlich.
 PA010	Diagnostik und Therapie mit einem Patienten in Anwesenheit, pro 1 Min.	"Beinhaltet psychologische und psychotherapeutische Diagnostik und Psychotherapie (Begrüssung, Therapie, Verabschiedung). Es gilt ausschliesslich das persönliche, zeitgleiche Gespräch. Abrechenbar ist die Sitzungsdauer mit dem Patienten. Testdiagnostische Leistungen während der Therapie müssen unter der Position PA220 erfasst werden. Testdiagnostische Leistungen bis zu einer Durchführungszeit von 20 Min. werden mit dieser Tarifposition verrechnet. Die Testauswertung wird in der Vor- und Nachbereitung abgerechnet. "
 PA011	Diagnostik und Therapie mit einem Patienten in Anwesenheit, fernmündlich, pro 1 Min.	Beinhaltet psychologische und psychotherapeutische Diagnostik und Psychotherapie (Begrüssung, Therapie, Verabschiedung). Es gilt ausschliesslich das fernmündliche, zeitgleiche Gespräch. Abrechenbar ist die Sitzungsdauer mit dem Patienten. Testdiagnostische Leistungen bis zu einer Durchführungszeit von 20 Min. werden mit dieser Tarifposition verrechnet. Die Testauswertung wird in der Vor- und Nachbereitung abgerechnet.
@@ -76,18 +76,24 @@ PW020	Für die Therapie und Diagnostik benötigtes zusätzliches Testmaterial, C
 752.36	SAMPLE 3
 752.37	SAMPLE 4
 752.38	SAMPLE 5
-752.39	SAMPLE 6
+752.39	SAMPLE 6\
 '''
 
 class Lut:
   def __init__(self):
+    pass
+
+  def open(self, krzLstErb=None):
     self._lutTarZif=lut=dict()
     self._lutLstErb=lutLstErb
+    if krzLstErb is not None:
+      self._krzLstErb=krzLstErb
 
     for ln in rawTxt.split('\n'):
       el=ln.split('\t')
       if not el[0]:
         _log.warning(f'ignore{el}')
+        continue
       lut[el[0]]=(2.58,)+tuple(el[1:])
 
   def tar_zif(self,tz):

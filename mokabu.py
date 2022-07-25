@@ -2,14 +2,20 @@
 # -*- coding: utf-8 -*-
 
 #https://www.w3schools.com/sql/sql_join.asp
+import logging
+_log=logging.getLogger(__name__)
+
 import sqlite3 as lite
 import sys,os,time
 import report
+from TarZif import Lut
 
 class MoKaBu:
 
-  def __init__(self,fn='mokabu.db'):
+  def __init__(self,fn='mokabu.db',lstErb=None):
     self.open(fn)
+    self._lut=lut=Lut()
+    lut.open(lstErb)
 
   def open(self,fn):
     try:
@@ -17,7 +23,7 @@ class MoKaBu:
         self.dbc=dbc=db.cursor()
         dbc.execute('SELECT SQLITE_VERSION()')
         data = dbc.fetchone()
-        print("SQLite version: %s" % data)
+        _log.debug("SQLite version: %s" % data)
         #One way of permanently turning on foreign_keys by default is to inject the following line into ~/.sqliterc: PRAGMA foreign_keys = ON;
         dbc.execute("PRAGMA foreign_keys = 1")
         #dbc.execute("PRAGMA foreign_keys")
@@ -27,18 +33,18 @@ class MoKaBu:
                    'SELECT COUNT(*) FROM Account',
                    'SELECT COUNT(*) FROM EventLog',
                    'SELECT COUNT(*) FROM EventType'):
-          print(sql+' -> ',end='')
+          _log.debug(sql+' -> ',end='')
           for row in dbc.execute(sql):
-            print(row)
+            _log.debug(row)
     except lite.Error as e:
-        print("Error %s:" % e.args[0])
+        _log.error("Error %s:" % e.args[0])
         sys.exit(1)
 
   def close(self):
     try:
         self.db.close()
     except lite.Error as e:
-        print("Error %s:" % e.args[0])
+        _log.error("Error %s:" % e.args[0])
 
 
   def reset(self):
@@ -88,16 +94,24 @@ class MoKaBu:
     sqlTplBeh='''SELECT dtTreatment,costPerHour,duration,comment,tarZif FROM Treatment tr
     WHERE tr.fkInvoice=%s
     ORDER BY tr.dtTreatment'''
-    repIvc=report.Invoice(fn)
+    repIvc=report.Invoice(fn,self._lut)
 
     for recRng in dbcRng.execute(sqlRng):
-      print(recRng)
+      _log.debug(recRng)
       sqlBeh=sqlTplBeh%recRng[0]
       dbcBeh=dbcBeh.execute(sqlBeh)
       dBeh=dbcBeh.fetchall()
-      print(dBeh)
-      #repIvc.add(recRng[3:], recRng[1], recRng[2], dBeh)  # add(klient,tplID,datRng,behandlungen):
-      repIvc.build(recRng[1],'MK_A',recRng[3:], (recRng[0],recRng[2]),dBeh)#  add(klient,tplID,datRng,behandlungen):
+      _log.debug(dBeh)
+      try:
+        krzLstErb= self._lut._krzLstErb
+      except AttributeError:
+        if int(recRng[9])<8000: #PLZ is not in ZH
+          krzLstErb='MK_A'
+        else:
+          krzLstErb='MK_Z'
+      ##if app..ar
+      ##  lstErb
+      repIvc.build(recRng[1],krzLstErb,recRng[3:], (recRng[0],recRng[2]),dBeh)#  add(klient,tplID,datRng,behandlungen):
 
     repIvc.publish()
     report.default_app_open(fn);
@@ -187,13 +201,14 @@ class MoKaBu:
 
 
 if __name__=='__main__':
-
+  logging.basicConfig(level=logging.WARNING, format='%(levelname)s:%(module)s:%(lineno)d:%(funcName)s:%(message)s ')
   import argparse
   parser = argparse.ArgumentParser()
   parser.add_argument('-m', '--mode', type=int, help='mode bits', default=0x0)
+  parser.add_argument('--lstErb', help='Kürzel Leistungserbringer', default=None)
   args = parser.parse_args()
-  print(args)
-  mkb=MoKaBu('mokabu.db')
+  _log.debug(args)
+  mkb=MoKaBu('mokabu.db',args.lstErb)
   #mkb.open()
   #mkb.reset()
   #mkb.populate()

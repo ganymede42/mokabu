@@ -23,7 +23,8 @@ bitmask for mode:
   0b0011 0000: (2 bit) Format
   0x1c        0: Normal
               1: IV mit Tarifziffer
-              2: Offizielles Format mit Tarifziffer etc.
+              2: Offizielles Format mit Tarifziffer etc. für Monika Kast
+              3: Offizielles Format mit Tarifziffer etc. (allgemein)
 '''
 import logging
 _log=logging.getLogger(__name__)
@@ -111,8 +112,8 @@ class Couvert():
 
 class Invoice():
 
-  def __init__(self,fn='invoice.pdf'):
-    self._lut=Lut()
+  def __init__(self,fn='invoice.pdf',lut=None):
+    self._lut=lut
     #dimension by default 1/72 inch
     self.canvas=canvas=rlpg.canvas.Canvas(fn,pagesize=rlps.A4)
     self.styles=styles=rls.getSampleStyleSheet()
@@ -120,16 +121,16 @@ class Invoice():
     styles.add(rls.ParagraphStyle(name='Right', alignment=rle.TA_RIGHT))
     styles.add(rls.ParagraphStyle(name='Center', alignment=rle.TA_CENTER))
 
-  def build(self,tplID,lstErb,klient,rng,behandlungen):
+  def build(self,tplID,krzLstErb,klient,rng,behandlungen):
     #lstErb Leistungserbringer
-    self._lstErb=self._lut.lst_erb(lstErb)
+    self._lstErb=self._lut.lst_erb(krzLstErb)
 
     if tplID==None:tplID=0x08
 
     fmt=(tplID>>4)&0x3
     if fmt in (0,1):
       self.buildOrig(tplID,klient,rng[1],behandlungen)
-    if fmt==2:
+    if fmt in(2,3):
       self.buildTarZif(tplID,klient,rng,behandlungen)
     self.canvas.showPage()
 
@@ -157,6 +158,23 @@ class Invoice():
     #frm=rlp.Frame(brd[0],brd[3],sz[0]-brd[0]-brd[1],sz[1]-brd[2]-brd[3],showBoundary=1)
 
     story=[]
+
+    if (tplID>>4)&0x3 == 2: # format Monika Kast
+      im=rlp.Image("Logo_Monika_s.png",7*rlu.cm,2*rlu.cm)
+      im.drawOn(canvas, brd[0], sz[1]-brd[2]-2*rlu.cm)
+      txt='''<font size="7"><b>Monika Kast Perry</b><br/>
+      Dr. phil., Fachpsychologin<br/>
+      für Kinder- & Jugendpsychologie FSP<br/>
+      eidg. anerkannte Psychotherapeutin.<br/>
+      Weihermattstrasse 11a · 5242 Birr · +41 76 335 72 79<br/>
+      monika.kast-perry@psychologie.ch · praxis-weiterkommen.com</font>'''
+      p=rlp.Paragraph(txt, styR)
+      story.append(rlp.Paragraph(txt,styR))
+    else:
+      txt='''<font size="15"><b>Rückkfoderungsbeleg</b><br/></font>'''
+      story.append(rlp.Paragraph(txt,styN))
+      story.append(rlp.Spacer(1,12))
+
 
     tblStyle=rlp.TableStyle([('INNERGRID',(0,0),(-1,-1),0.15,rll.colors.black),
                              ('BOX',(0,0),(-1,-1),0.15,rll.colors.black),
@@ -208,9 +226,6 @@ class Invoice():
       kGeb=time.strftime('%d.%m.%Y',kGeb)
     except:
       kGeb=''
-
-
-
 
     data=[
     ('Patient/Klient-','Name'             ,kNa,),
@@ -298,26 +313,35 @@ class Invoice():
     story.append(t)
 
     story.append(rlp.Spacer(1,12))
-    txt='''Ich bitte Sie, den Betrag von SFr. %.2f innert 30 Tagen auf folgendes Konto zu überweisen:<br/>
-    St. Galler Kantonalbank, IBAN-Nr. CH60 0078 1622 4188 6200 0<br/>
-    <br/>
-    Monika Kast Perry<br/>
-    Praxis weiterkommen<br/>
-    Weihermattstrasse 11a<br/>
-    5242 Birr'''%totSum
-    story.append(rlp.Spacer(1,12))
-    story.append(rlp.Paragraph(txt,styN))
-    txt='''Herzlichen Dank und liebe Grüsse'''
-    story.append(rlp.Spacer(100,12))
-    story.append(rlp.Paragraph(txt,styN))
-    story.append(rlp.Spacer(1,12))
-    im=rlp.Image("signature.png",8*rlu.cm,8*262/1024*rlu.cm) #1024x262, 735x139
-    im.hAlign='CENTER'
-    story.append(im)
-    story.append(rlp.Spacer(1,12))
-    txt='''Monika Kast Perry'''
-    story.append(rlp.Paragraph(txt,styC))
-    story.append(rlp.Spacer(1,12))
+    if (tplID>>4)&0x3 == 2: # format Monika Kast
+      txt='''Ich bitte Sie, den Betrag von SFr. %.2f innert 30 Tagen auf folgendes Konto zu überweisen:<br/>
+      St. Galler Kantonalbank, IBAN-Nr. CH60 0078 1622 4188 6200 0<br/>'''%totSum
+      story.append(rlp.Spacer(1,12))
+      story.append(rlp.Paragraph(txt,styN))
+      txt='''Herzlichen Dank und freundliche Grüsse'''
+      story.append(rlp.Spacer(100,12))
+      story.append(rlp.Paragraph(txt,styN))
+      story.append(rlp.Spacer(1,12))
+      im=rlp.Image("signature.png",8*rlu.cm,8*262/1024*rlu.cm) #1024x262, 735x139
+      im.hAlign='CENTER'
+      story.append(im)
+      story.append(rlp.Spacer(1,12))
+      txt='''Monika Kast Perry'''
+      story.append(rlp.Paragraph(txt,styC))
+      story.append(rlp.Spacer(1,12))
+
+    #story.append(rlp.Spacer(1,-24))
+    #txt='''
+    #%s<br/>
+    #%s %s<br/>'''%tuple(map(lambda x: x if x else '',klient[0:3]))
+    #for i in range(3,6):
+    #  adr=klient[i]
+    #  if adr: # not None and not empty
+    #    txt+=adr+'<br/>'
+    #txt+='%s %s<br/>'''%tuple(map(lambda x: x if x else '',klient[6:8]))
+    #story.append(rlp.Paragraph(txt,styN))
+
+
 
     if (tplID)&0x8:
       txt=lstErb['qrFmt']%(totSum,dateconvert(datRng)+' '+klient[8]+' '+klient[9])
@@ -790,7 +814,7 @@ if __name__ == '__main__':
 
   def testInvoice(fn):
     lstKlient=\
-      ((None, 'Saki', 'Karakurt', 'Meierwiesenstrasse 24', '', '', None, 'Buchs', 'Bayraktar', 'Aras', '2012-02-15', '765.234.433.454 Frick'),
+      ((None, 'Saki', 'Karakurt', 'Meierwiesenstrasse 24', '', '', 8123, 'Buchs', 'Bayraktar', 'Aras', '2012-02-15', '765.234.433.454'),
       #(('Frau ','Saki','Karakurt','Meierwiesenstrasse 24','','','8107','Buchs','Bayraktar','Aras','2012-02-15','765.234.433.454 Frick'),
         ('Familie', 'Preisig U. &', 'C.', 'Sihlaustr. 3', '', '', '8134', 'Adliswil', 'Radic Baumgartner', 'Ksenija', '1975-06-18', None),)
     lstTpl=\
@@ -814,14 +838,18 @@ if __name__ == '__main__':
           ('2020-08-06', 180.0, 60.0, 'Bemerkung 8', '754.34')))
 
     rep=Invoice(fn)
+    lut=Lut()
+    lut.open()
+    rep._lut=lut
     #for i in range(len(lstKlient)):
     #  rep.add(lstKlient[i],None,lstDatRng[i],lstBeh[i])
     #for i in range(len(lstTpl)):
     #  rep.add(lstKlient[0],lstTpl[i],lstDatRng[0],lstBeh[0])
 
     #build(self, tplID, lstErb, klient, datRng, behandlungen):
-    #rep.build(0x28,'MK_A',lstKlient[0],lstRng[0],lstBeh[0])
-    rep.build(0x8,'MK_A',lstKlient[0],lstRng[0],lstBeh[0])
+    #rep.build(0x08,'MK_A',lstKlient[0],lstRng[0],lstBeh[0])
+    rep.build(0x28,'MK_A',lstKlient[0],lstRng[0],lstBeh[0])
+    #rep.build(0x38,'MK_A',lstKlient[0],lstRng[0],lstBeh[0])
 
 
     rep.publish()
@@ -855,6 +883,9 @@ if __name__ == '__main__':
 
   fn='test%d.pdf'
   idx=0
+  #playground(fn%idx,lorIps)
+  #default_app_open(fn%idx);idx+=1
+
   #test1(fn%idx)
   #default_app_open(fn%idx);idx+=1
 
