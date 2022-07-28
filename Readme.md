@@ -19,17 +19,30 @@ Button Invoice   -> öffnet die Rechnungen der aktuellen Person
 Button Report Treatment -> gesammter Therapieverlauf der aktuellen Person -> therapy_progress.pdf
 
 
-Die Art wie eine Rechnung ausgedruckt wird, kann mit <tplInvoice veränder werden.
+Die Art wie eine Rechnung ausgedruckt wird, kann mit tplInvoice veränder werden.
 Es ist ein 'Bitfeld und ist eine Summe folgender Zahlen:
+
+0: Normal
++1: 1. Mahnung
++2: 2. Mahnung
+
  0 : nichts spezielles
 +1 : Zahlungserinnerung
 +2 : 2. Mahnung
-+4 : Rechnung für IV
-+8 : QR-Code
-+16: Offizielles Format mit Tarifziffer
 
--> 4+8=12 -> IV-Rechnung mit QR-Code
-default is 4.
++8 : QR-Code
+
++16*0: Normal
++16*1: IV mit Tarifziffer
++16*2: Offizielles Format mit Tarifziffer etc. für Monika Kast
++16*3: Offizielles Format mit Tarifziffer etc. (allgemein)
+
+z.B. 
+  8+16=12 -> IV-Rechnung mit QR-Code
+  8+32=40 -> Offizielles Format mit Tarifziffer etc. für Monika Kast mit QR-Code
+  8+48=56 -> Offizielles Format mit Tarifziffer etc. (allgemein) mit QR-Code
+
+default is 8.
 ```
 
 Erstellen neuer Rechnungen

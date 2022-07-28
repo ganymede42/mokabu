@@ -104,5 +104,5 @@ class Lut:
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(module)s:%(lineno)d:%(funcName)s:%(message)s ')
-  tz=TarZifLut()
+  tz=Lut()
   pass

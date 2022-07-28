@@ -52,7 +52,13 @@ def MainApp(mkb,dbg):
   #WndChildAdd(wpWnd)
   #app.topLevelWindows()
   #app.topLevelWidgets()
-  #sys.excepthook=excepthook
+
+  #Check if in debug mode
+  gettrace=sys.gettrace()
+  if gettrace:
+    _log.debug(gettrace)
+  else:
+    sys.excepthook=excepthook
   sys.exit(app.exec_())
 
 def testPerson(mainWnd,idx=39):
@@ -75,7 +81,7 @@ def testInvoice(mainWnd,idx=0,fkPerson=40):
 
 def testTreatment(mainWnd,idx=0,fkPerson=106,pkTreatment=881):
   wnd=WndTreatment(fkPerson=fkPerson, pkTreatment=pkTreatment)
-  wnd.cbTrt.setCurrentIndex(idx)
+  wnd._cbTrt.setCurrentIndex(idx)
   wnd.OnCbSelChanged(idx)#go idx treatment
   sub=qtw.QMdiSubWindow()
   sub.setWidget(wnd)
@@ -102,15 +108,14 @@ def SqlUpdate(fldLst,table,sqlWhere=None):
   ''
   for w in fldLst:
     fld=w.windowTitle()
-    try:
+    if type(w)==qtw.QComboBox and fld=='tarZif':
+      val=w.currentText().split(':', 1)[0]
+      if val:
+        assert (val in app.mkb._lut._lutTarZif.keys())
+    elif type(w)==qtw.QTextEdit: #and fld=='document':
+      val=w.toPlainText()
+    else:
       val=w.text()
-    except AttributeError:
-      if type(w)==qtw.QComboBox:
-        val=w.currentText().split(':',1)[0]
-        if val:
-          assert(val in app.mkb._lut._lutTarZif.keys())
-      else:
-        val=w.toPlainText()
     if val=='':val=None
     if fld=='id' and sqlWhere is None:
       sqlWhere=' WHERE '+fld+'=?'
@@ -129,15 +134,20 @@ def SqlUpdate(fldLst,table,sqlWhere=None):
   db.commit()
 
 def SqlInsert(fldLst,table):
+  app=qtw.QApplication.instance()
   sqlFld=list()
   sqlUpd=list()
   ''
   for w in fldLst:
     fld=w.windowTitle()
-    try:
-      val=w.text()
-    except AttributeError:
+    if table=='Treatment' and fld=='tarZif':
+      val=w.currentText().split(':', 1)[0]
+      if val:
+        assert (val in app.mkb._lut._lutTarZif.keys())
+    elif type(w)==qtw.QTextEdit:
       val=w.toPlainText()
+    else:
+      val=w.text()
     if val=='':val=None
     if fld=='id':
       continue
@@ -157,6 +167,16 @@ def SqlInsert(fldLst,table):
   newid=dbc.execute(sqlStr).fetchone()
   return newid[0]
 
+def SqlDelete(where,table):
+  app=qtw.QApplication.instance()
+  sqlStr='DELETE FROM '+table+' WHERE '+where
+  _log.debug(sqlStr)
+  app=qtw.QApplication.instance()
+  db=app.mkb.db
+  dbc=db.cursor()
+  dbc.execute(sqlStr)
+  db.commit()
+  return
 
 
 #Here a clean Main Window implementation.
@@ -1068,9 +1088,9 @@ class WndPerson(WndSqlBase):
       MsgBox('No selected person')
       return
     wnd=WndTreatment(fkPerson=pkPerson)
-    idx=wnd.cbTrt.count()-1
-    wnd.cbTrt.setCurrentIndex(idx)
-    wnd.OnCbSelChanged(idx)
+    idx=wnd._cbTrt.count()-1
+    wnd._cbTrt.setCurrentIndex(idx)
+    wnd.OnCbSelChanged(idx) #force to update at beginning
     sub=qtw.QMdiSubWindow()
     sub.setWidget(wnd)
     #sub.setWindowTitle(wnd.windowTitle())
@@ -1121,7 +1141,7 @@ class WndPerson(WndSqlBase):
 class WndTreatment(WndSqlBase):
   def __init__(self,sqlCombo=None,fkPerson=None,pkTreatment=None,geometry=(100,100,800,500)):
     super(WndTreatment,self).__init__(geometry)
-    self.args=(sqlCombo,fkPerson)
+    self._args=(sqlCombo, fkPerson)
     if sqlCombo:
       title=sqlCombo
     elif fkPerson:
@@ -1138,13 +1158,13 @@ class WndTreatment(WndSqlBase):
     loF=qtw.QFormLayout()
 
     loV.addLayout(loF)
-    self.cbTrt=cb=qtw.QComboBox()
+    self._cbTrt=cb=qtw.QComboBox()
     cb.setEditable(True)
     cb.setMaxVisibleItems(20)
     cb.activated.connect(self.OnCbSelChanged)
 
     loF.addRow('Suche',cb)
-    self.fldLst=fldLst=list()
+    self._fldLst=fldLst=list()
     for desc in ('id','fkInvoice','fkPerson','dtTreatment','duration','costPerHour','comment',('tarZif',qtw.QComboBox)):
       if type(desc)==str:
         w=self.SqlWidget(desc);fld=desc
@@ -1152,6 +1172,7 @@ class WndTreatment(WndSqlBase):
         w=self.SqlWidget(*desc);fld=desc[0]
       if fkPerson is not None and fld=='fkPerson': w.setText(str(fkPerson))
       if fld=='tarZif':
+        self._cbTarZif=w
         self.TarZifPopulate(w)
       fldLst.append(w)
       loF.addRow(fld,w)
@@ -1175,8 +1196,8 @@ class WndTreatment(WndSqlBase):
       loH.addWidget(btn)
 
   def CbTrtPopulate(self,pkTreatment=None):
-    (sqlCombo,fkPerson)=self.args
-    cb=self.cbTrt
+    (sqlCombo,fkPerson)=self._args
+    cb=self._cbTrt
     dbc=qtw.QApplication.instance().mkb.db.cursor()
     if sqlCombo:
       itemsTrt=dbc.execute(sqlCombo).fetchall()
@@ -1206,29 +1227,26 @@ class WndTreatment(WndSqlBase):
     cb.setCompleter(cpl)
 
   def OnCbSelChanged(self,i):
-    cb=self.cbTrt
+    cb=self._cbTrt
     curData=cb.currentData()
     _log.debug(f'{i},{curData},{cb.currentIndex()}')
     if not self.SwitchRecord():
       cb.setCurrentText('')
       return
-    if cb.currentData() is None:
-      _log.warning("TODO:New Person inserted")
-      cb.removeItem(i)
+    if curData is None:
+      _log.warning("First treatment inserted")
+      self.OnNew()
     else:
       dbc=qtw.QApplication.instance().mkb.db.cursor()
       row=dbc.execute('SELECT * FROM Treatment WHERE id=%d'%curData).fetchone()
       #print(d)
-      for w,d in zip(self.fldLst,row):
+      for w,d in zip(self._fldLst, row):
         if d is None:
           d=''
         else:
           d=str(d)
         if type(w)==qtw.QComboBox:
-          self.OnTarZifSelChanged(d)
-          #w.setEditText(d)
-          #w.setCurrentText(d)
-          #w.setCurrentIndex(setIdx)
+          self.OnTarZifSelChanged(d,False)
         else:
           w.setText(d)
       self.SetChanged(False)
@@ -1236,36 +1254,29 @@ class WndTreatment(WndSqlBase):
   def TarZifPopulate(self,cb):
     cb.setEditable(True)
     cb.setMaxVisibleItems(20)
-    #cb.activated.connect(self.OnTarZifSelChanged)
     lut=qtw.QApplication.instance().mkb._lut
     cmpTbl=[]
     for k,v in lut._lutTarZif.items():
       txt=k+': '+str(v[1])
       cmpTbl.append(txt)
       cb.addItem(txt)
-      #if pkTrt==val:
-      #  setIdx=cb.count()-1
-    #cb.setCurrentIndex(setIdx) #by default the text will be the first item. This clears the value if -1 or set to the selected one
-    #if pkTreatment:
-    #  if setIdx==-1:
-    #    MsgBox('pkTreatment %d not found'%pkTreatment,icon=qtw.QMessageBox.Warning)
-    #  else:
-    #    self.OnCbSelChanged(setIdx)
     cpl=qtw.QCompleter(cmpTbl)
     cpl.setCaseSensitivity(qtc.Qt.CaseInsensitive)
     cpl.setFilterMode(qtc.Qt.MatchContains)
     cb.setCompleter(cpl)
-    cb.currentTextChanged.connect(self.OnTarZifSelChanged)
-    self.cbTarZif=cb
+    self._cbTarZif=cb
+    cb.currentTextChanged.connect(lambda x:self.OnTarZifSelChanged(x, True))
     pass
 
-  def OnTarZifSelChanged(self,txt):
+  def OnTarZifSelChanged(self,txt,updateCost):
     _log.debug(str(txt))
 
     lut=qtw.QApplication.instance().mkb._lut._lutTarZif
-    cb=self.cbTarZif
+    cb=self._cbTarZif
+    cb.blockSignals(True)
     if txt=='':
       cb.setCurrentText('')
+      cb.blockSignals(False)
       return
     kv=txt.split(':',1)
     if len(kv)<2:
@@ -1275,49 +1286,72 @@ class WndTreatment(WndSqlBase):
       _log.debug(f'{n} -> {cpl.currentCompletion()}')
       if n==1:
         cb.setCurrentText(cpl.currentCompletion())
-    #assert (kv[0] in lut.keys())k
-    pass
+    if updateCost:
+      w=self._fldLst[5]
+      assert(w.windowTitle()=='costPerHour')
+      lut=qtw.QApplication.instance().mkb._lut
+      tz=lut.tar_zif(kv[0])
+      w.setText(f'{float(tz[0])*60:0.2f}')
+    cb.blockSignals(False)
 
   def OnWndTreatment(self):
-    cb=self.cbTrt
+    cb=self._cbTrt
     pkBehandlung=cb.currentData()
     wpWnd=wp.MainWindow()
     wpWnd.record_open(pkBehandlung)
     WndChildAdd(wpWnd)
 
   def OnSave(self):
-    for w in self.fldLst:
+    for w in self._fldLst:
       fld=w.windowTitle()
       if fld=='id': break
     if w.text()=='':
-      newId=SqlInsert(self.fldLst,'Treatment')
-      w.setText(str(newId)) #TODO add entry to combobox
+      pkTreatment=SqlInsert(self._fldLst, 'Treatment')
+      #w.setText(str(pkTreatment)) #TODO add entry to combobox
     else:
-      SqlUpdate(self.fldLst,'Treatment')
+      SqlUpdate(self._fldLst, 'Treatment')
+      pkTreatment=self._cbTrt.currentData()
     self.SetChanged(False)
+    self._cbTrt.clear() #clear all entries before repopulate
+    self.CbTrtPopulate(pkTreatment)
 
   def OnDelete(self):
     #TODO
-    MsgBox('NOT YET IMPLEMENTED')
+    w=self._fldLst[0]
+    assert(w.windowTitle()=='id')
+    txt=w.text()
+    if txt:
+      res=MsgBox('really delete this record?',
+                 btn=qtw.QMessageBox.Yes|qtw.QMessageBox.No|qtw.QMessageBox.Cancel,
+                 icon=qtw.QMessageBox.Question)
+      _log.debug(f'pressed{res}')
+      if res==qtw.QMessageBox.Yes:
+        SqlDelete(f'id={txt}','Treatment')
+    self.OnNew()
+    self.SetChanged(False)
+    self._cbTrt.clear() #clear all entries before repopulate
+    self.CbTrtPopulate(None)
 
   def OnNew(self):
     if not self.SwitchRecord(): return
-    self.cbTrt.setCurrentIndex(-1)
-    for w in self.fldLst:
-      if w.windowTitle()=='fkPerson':
+    self._cbTrt.setCurrentIndex(-1)
+    self.OnTarZifSelChanged('PA010',True)
+    for w in self._fldLst:
+      t=w.windowTitle()
+      if t=='fkPerson':
         fkPerson=int(w.text())
         continue
-      elif w.windowTitle()=='costPerHour':
-        w.setText('180')
-      elif w.windowTitle()=='duration':
+      elif t=='duration':
         w.setText('60')
-      elif w.windowTitle()=='dtTreatment':
+      elif t=='dtTreatment':
         qtw.QLineEdit.setText(w,(time.strftime('%d.%m.%y',time.gmtime())))
-      elif w.windowTitle()=='comment':
+      elif t=='comment':
         dbc=qtw.QApplication.instance().mkb.db.cursor()
         row=dbc.execute('SELECT fstName FROM Person WHERE id=%d'%fkPerson).fetchone()
         w.setText('Therapie mit %s'%row[0])
-      else:
+      elif t=='costPerHour':
+        pass
+      elif type(w)!=qtw.QComboBox:
         w.setText('')
     self.SetChanged(False)
 

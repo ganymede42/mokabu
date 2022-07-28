@@ -170,8 +170,12 @@ class Invoice():
       monika.kast-perry@psychologie.ch · praxis-weiterkommen.com</font>'''
       p=rlp.Paragraph(txt, styR)
       story.append(rlp.Paragraph(txt,styR))
+      txt='''<font size="15"><b>Rückfoderungsbeleg</b><br/></font>'''
+      story.append(rlp.Spacer(1,-22))
+      story.append(rlp.Paragraph(txt,styN))
+      story.append(rlp.Spacer(1,12))
     else:
-      txt='''<font size="15"><b>Rückkfoderungsbeleg</b><br/></font>'''
+      txt='''<font size="15"><b>Rückfoderungsbeleg</b><br/></font>'''
       story.append(rlp.Paragraph(txt,styN))
       story.append(rlp.Spacer(1,12))
 
@@ -362,9 +366,31 @@ class Invoice():
       canvas.setFont("Helvetica", 8)
       canvas.drawCentredString(x+1.7*rlu.cm,y-.1*rlu.cm,'QR-Rechnung')
 
-
-
     frm.addFromList(story,canvas)
+
+
+    story=[]
+    # 11.3 4.6
+    if (tplID>>4)&0x3 == 2: # format Monika Kast
+      frm=rlp.Frame(12*rlu.cm, sz[1]-8.7*rlu.cm, 5*rlu.cm, 2.5*rlu.cm, showBoundary=0)
+    else:
+      frm=rlp.Frame(12*rlu.cm, sz[1]-7.0*rlu.cm, 5*rlu.cm, 2.5*rlu.cm, showBoundary=0)
+
+    #rAnr,rNa,rVo,rAdr,rAdr2,rAdr3,rPlz,rOrt,kNa,kVo,kGeb,kAhv=klient
+    txt=''
+    if rAnr:
+      txt+=rAnr+' '
+    txt+=f'{rVo} {rNa}<br/>'
+    for adr in (rAdr,rAdr2,rAdr3):
+      if adr:
+        txt+=adr+'<br/>'
+    txt+=f'{rPlz} {rOrt}<br/>'
+    story.append(rlp.Paragraph(txt,styN))
+    frm.addFromList(story, canvas)
+    #-barcode: (Beispiele TarZif Atemtherapie, wird aber nicht gebraucht
+    # /-/#49#13102019201706#NaN
+    # /-/#96#28012018213945#634317
+
 
   def buildOrig(self,tplID,klient,datRng,behandlungen):
     tplMahnung=tplID&0x3
@@ -678,145 +704,151 @@ class TherapyProgress(rlp.SimpleDocTemplate):
   def publish(self):
     self.build(self.story)
 
-def playground(fn='test.pdf',lorIps='my long sample text '*100):
-  canvas=rlpg.canvas.Canvas(fn,pagesize=rlps.A4)
-  styles=rls.getSampleStyleSheet()
-  styles.add(rls.ParagraphStyle(name='Justify', alignment=rle.TA_JUSTIFY))
-  styles.add(rls.ParagraphStyle(name='Right', alignment=rle.TA_RIGHT))
-  styles.add(rls.ParagraphStyle(name='Center', alignment=rle.TA_CENTER))
-  styN=styles['Normal']
-  styC=styles["Center"]
-  styJ=styles["Justify"]
-  sz=rlps.A4
-  brd=(1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm)#l,r,t,b
-  l=brd[0];r=sz[0]-brd[1];t=sz[1]-brd[2];b=brd[3]
-  canvas.setLineWidth(.3)
-  canvas.line(l,t,r,t)
-  canvas.line(l,b,r,b)
-  brd=(1.4*rlu.cm,1.2*rlu.cm,1.2*rlu.cm,1.2*rlu.cm)#l,r,t,b
-
-  styT=rls.ParagraphStyle(name='Test',fontSize=6,leading=8,backColor='yellow',alignment=rle.TA_CENTER)
-  styT=rls.ParagraphStyle(name='Test',fontSize=6,leading=8,backColor='yellow',leftIndent=50,endDots='_.,',spaceBefore=20,alignment=rle.TA_LEFT)
-  #styles.add(rls.ParagraphStyle(name='Center', alignment=rle.TA_CENTER))
-
-  story=[]
-  story.append(rlp.Paragraph(lorIps,styN))
-  story.append(rlp.Paragraph(lorIps,styC))
-  story.append(rlp.Paragraph(lorIps,styJ))
-
-  frm=rlp.Frame(brd[0],brd[3],sz[0]-brd[0]-brd[1],sz[1]-brd[2]-brd[3],showBoundary=1)
-  frm.addFromList(story,canvas)
-
-  story=[]
-  story.append(rlp.Paragraph(lorIps,styT))
-  story.append(rlp.Paragraph('ABCD',styJ))
-  story.append(rlp.Paragraph('ABCD',styT))
-  story.append(rlp.Paragraph('ABCD',styJ))
-  r=list(range(10))
-  data=list();
-  for i in range(5):
-    data.append(r)
-  t=rlp.Table(data)
-  t.hAlign='LEFT'
-  t.setStyle(rlp.TableStyle([('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black),
-                             ('LINEBELOW',(-1,-2),(-1,-1),1,rll.colors.black)]))
-  story.append(t)
-  story.append(rlp.Paragraph('ABCD',styJ))
-  cw=tuple(range(15,40,2));cw=cw[:10]
-  t=rlp.Table(data,colWidths=cw)
-  t.hAlign='LEFT'
-  t.setStyle(rlp.TableStyle([('ALIGN',(1,1),(-2,-2),'RIGHT'),
-                         ('TEXTCOLOR',(1,1),(-2,-2),rll.colors.red),
-                         ('VALIGN',(0,0),(0,-1),'TOP'),
-                         ('TEXTCOLOR',(0,0),(0,-1),rll.colors.blue),
-                         ('ALIGN',(0,-1),(-1,-1),'CENTER'),
-                         ('VALIGN',(0,-1),(-1,-1),'MIDDLE'),
-                         ('TEXTCOLOR',(0,-1),(-1,-1),rll.colors.green),
-                         ('INNERGRID',(0,0),(-1,-1),0.25,rll.colors.black),
-                         ('BOX',(0,0),(-1,-1),0.25,rll.colors.black),
-                         ]))
-  story.append(t)
-  story.append(rlp.Paragraph('ABCD',styJ))
-  story.append(rlp.Paragraph('ABCD',styJ))
-  story.append(rlp.Paragraph('ABCD',styJ))
-  brd=(4*rlu.cm,7*rlu.cm,12*rlu.cm,2*rlu.cm)#l,r,t,b
-  frm=rlp.Frame(brd[0],brd[3],sz[0]-brd[0]-brd[1],sz[1]-brd[2]-brd[3],showBoundary=1)
-  frm.addFromList(story,canvas)
-  canvas.showPage() #adds a new page
-  canvas.save()
-
-
-def test1(fn):
-  from reportlab.lib.styles import ParagraphStyle
-  from reportlab.platypus import SimpleDocTemplate,Paragraph
-  from reportlab.platypus.flowables import DocAssign,DocExec,DocPara,DocIf,DocWhile
-  normal=ParagraphStyle(name='Normal',fontName='Helvetica',fontSize=8.5,leading=11)
-  header=ParagraphStyle(name='Heading1',parent=normal,fontSize=14,leading=19,
-                        spaceAfter=6,keepWithNext=1)
-  story=[
-    DocAssign('currentFrame','doc.frame.id'),
-    DocAssign('currentPageTemplate','doc.pageTemplate.id'),
-    DocAssign('aW','availableWidth'),
-    DocAssign('aH','availableHeight'),
-    DocAssign('aWH','availableWidth,availableHeight'),
-    DocAssign('i',3),
-    DocIf('i>3',Paragraph('The value of i is larger than 3',normal),
-          Paragraph('The value of i is not larger than 3',normal)),
-    DocIf('i==3',Paragraph('The value of i is equal to 3',normal),Paragraph('The value of i is not equal to 3',normal)),
-    DocIf('i<3',Paragraph('The value of i is less than 3',normal),
-          Paragraph('The value of i is not less than 3',normal)),
-    DocWhile('i',[DocPara('i',format='The value of i is %(__expr__)d',style=normal),DocExec('i-=1')]),
-    DocPara(
-      '"{"+", ".join(("%s=%s" % (_k,(_v.__class__.__name__ if "<" in repr(_v) else repr(_v)[1:] if repr(_v) and repr(_v)[0] in "ub" else repr(_v))) for _k,_v in sorted(doc._nameSpace.items()) if _k not in ("_k","_v")))+"}"',
-      escape=True),
-    DocPara('doc.canv.getPageNumber()','The current page number is %(__expr__)d',style=normal)
-  ]
-  doc=SimpleDocTemplate(fn)
-  doc.build(story)
-
-def testBarcode():
-  #/home/zamofing_t/Documents/prj/Mokabu/scratch/reportlab/tests/test_graphics_barcode.py
-  txt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n\nCHF\n\n\n\n\n\n\n\nNON\n\n\nEPD'''
-  txt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n1234.00\nCHF\nS\nPersZahlung\nStrasseZahlung\n\n5430\nWettingen\nCH\nNON\n\nMitteilung\nEPD'''
-  fmt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\nS\n\n\n\n\n\n\nNON\n\n%s\nEPD'''
-  txt=fmt%(1234,'Mitteilung')
-  #https://www.paymentstandards.ch/dam/downloads/ig-qr-bill-de.pdf
-  #https://de.wikipedia.org/wiki/QR-Rechnung
-  #https://qr-rechnung.net/#/
-  from reportlab.graphics.shapes import Drawing
-  from reportlab.graphics.barcode import getCodes
-  outDir='/tmp/barcode'
-  os.makedirs(outDir,exist_ok=True)
-  i=getCodes()['QR'](txt)  #createBarcodeDrawing('QR',txt)
-  i.barWidth=300
-  i.barHeight=300
-
-  x0,y0,x1,y1=i.getBounds()
-  D=Drawing(x1-x0,y1-y0)
-  D.add(i)
-  D.save(formats=('gif',),outDir=outDir,fnRoot='QR')
-  print('gen '+outDir+'/QR.gif')
-  os.system('firefox '+outDir+'/QR.gif')
-  return
-
 
 if __name__ == '__main__':
 
   lorIps='Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et:::'
 
-  lorIps='''<p>Wenn er nicht gehorcht streicht sie das Gamen und TV schauen. In der Regel darf Aras 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
-<p align="center">Wenn er nicht gehorcht streicht sie das Gamen und TV schauen. In der Regel darf Aras 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
-<p align="right">Wenn er nicht gehorcht streicht sie das Gamen und TV schauen. In der Regel darf Aras 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
-<p align="justify">Wenn er nicht gehorcht streicht sie das Gamen und TV schauen. In der Regel darf Aras 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
-<p align="justify">Wenn er nicht <b>gehorcht</b> <i>streicht</i> <u>sie</u> das Gamen und TV schauen. In der Regel darf Aras 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
+  lorIps1='''<p>Wenn er nicht gehorcht streicht sie das Gamen und TV schauen. In der Regel darf Franz 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
+<p align="center">Wenn er nicht gehorcht streicht sie das Gamen und TV schauen. In der Regel darf Franz 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
+<p align="right">Wenn er nicht gehorcht streicht sie das Gamen und TV schauen. In der Regel darf Franz 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
+<p align="justify">Wenn er nicht gehorcht streicht sie das Gamen und TV schauen. In der Regel darf Franz 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
+<p align="justify">Wenn er nicht <b>gehorcht</b> <i>streicht</i> <u>sie</u> das Gamen und TV schauen. In der Regel darf Franz 60 min Medienkonsum. Diesen streicht sie manchmal für die ganze Woche. Wenn er Stempel von der Schule nach Hause bringt, hat es gut gemacht, kann er sich den Medienkonsum wieder verdienen.</p>
 '''
+
+
+  def playground(fn='test.pdf', lorIps='my long sample text '*100):
+    canvas=rlpg.canvas.Canvas(fn, pagesize=rlps.A4)
+    styles=rls.getSampleStyleSheet()
+    styles.add(rls.ParagraphStyle(name='Justify', alignment=rle.TA_JUSTIFY))
+    styles.add(rls.ParagraphStyle(name='Right', alignment=rle.TA_RIGHT))
+    styles.add(rls.ParagraphStyle(name='Center', alignment=rle.TA_CENTER))
+    styN=styles['Normal']
+    styC=styles["Center"]
+    styJ=styles["Justify"]
+    sz=rlps.A4
+    brd=(1.2*rlu.cm, 1.2*rlu.cm, 1.2*rlu.cm, 1.2*rlu.cm)  # l,r,t,b
+    l=brd[0];
+    r=sz[0]-brd[1];
+    t=sz[1]-brd[2];
+    b=brd[3]
+    canvas.setLineWidth(.3)
+    canvas.line(l, t, r, t)
+    canvas.line(l, b, r, b)
+    brd=(1.4*rlu.cm, 1.2*rlu.cm, 1.2*rlu.cm, 1.2*rlu.cm)  # l,r,t,b
+
+    styT=rls.ParagraphStyle(name='Test', fontSize=6, leading=8, backColor='yellow', alignment=rle.TA_CENTER)
+    styT=rls.ParagraphStyle(name='Test', fontSize=6, leading=8, backColor='yellow', leftIndent=50, endDots='_.,',
+                            spaceBefore=20, alignment=rle.TA_LEFT)
+    # styles.add(rls.ParagraphStyle(name='Center', alignment=rle.TA_CENTER))
+
+    story=[]
+    story.append(rlp.Paragraph(lorIps1, styN))
+    story.append(rlp.Paragraph(lorIps1, styC))
+    story.append(rlp.Paragraph(lorIps1, styJ))
+
+    frm=rlp.Frame(brd[0], brd[3], sz[0]-brd[0]-brd[1], sz[1]-brd[2]-brd[3], showBoundary=1)
+    frm.addFromList(story, canvas)
+
+    story=[]
+    story.append(rlp.Paragraph(lorIps, styT))
+    story.append(rlp.Paragraph('ABCD', styJ))
+    story.append(rlp.Paragraph('ABCD', styT))
+    story.append(rlp.Paragraph('ABCD', styJ))
+    r=list(range(10))
+    data=list();
+    for i in range(5):
+      data.append(r)
+    t=rlp.Table(data)
+    t.hAlign='LEFT'
+    t.setStyle(rlp.TableStyle([('LINEBELOW', (-1, -2), (-1, -1), 1, rll.colors.black),
+                               ('LINEBELOW', (-1, -2), (-1, -1), 1, rll.colors.black)]))
+    story.append(t)
+    story.append(rlp.Paragraph('ABCD', styJ))
+    cw=tuple(range(15, 40, 2));
+    cw=cw[:10]
+    t=rlp.Table(data, colWidths=cw)
+    t.hAlign='LEFT'
+    t.setStyle(rlp.TableStyle([('ALIGN', (1, 1), (-2, -2), 'RIGHT'),
+                               ('TEXTCOLOR', (1, 1), (-2, -2), rll.colors.red),
+                               ('VALIGN', (0, 0), (0, -1), 'TOP'),
+                               ('TEXTCOLOR', (0, 0), (0, -1), rll.colors.blue),
+                               ('ALIGN', (0, -1), (-1, -1), 'CENTER'),
+                               ('VALIGN', (0, -1), (-1, -1), 'MIDDLE'),
+                               ('TEXTCOLOR', (0, -1), (-1, -1), rll.colors.green),
+                               ('INNERGRID', (0, 0), (-1, -1), 0.25, rll.colors.black),
+                               ('BOX', (0, 0), (-1, -1), 0.25, rll.colors.black),
+                               ]))
+    story.append(t)
+    story.append(rlp.Paragraph('ABCD', styJ))
+    story.append(rlp.Paragraph('ABCD', styJ))
+    story.append(rlp.Paragraph('ABCD', styJ))
+    brd=(4*rlu.cm, 7*rlu.cm, 12*rlu.cm, 2*rlu.cm)  # l,r,t,b
+    frm=rlp.Frame(brd[0], brd[3], sz[0]-brd[0]-brd[1], sz[1]-brd[2]-brd[3], showBoundary=1)
+    frm.addFromList(story, canvas)
+    canvas.showPage()  # adds a new page
+    canvas.save()
+
+
+  def test1(fn):
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph
+    from reportlab.platypus.flowables import DocAssign, DocExec, DocPara, DocIf, DocWhile
+    normal=ParagraphStyle(name='Normal', fontName='Helvetica', fontSize=8.5, leading=11)
+    header=ParagraphStyle(name='Heading1', parent=normal, fontSize=14, leading=19,
+                          spaceAfter=6, keepWithNext=1)
+    story=[
+      DocAssign('currentFrame', 'doc.frame.id'),
+      DocAssign('currentPageTemplate', 'doc.pageTemplate.id'),
+      DocAssign('aW', 'availableWidth'),
+      DocAssign('aH', 'availableHeight'),
+      DocAssign('aWH', 'availableWidth,availableHeight'),
+      DocAssign('i', 3),
+      DocIf('i>3', Paragraph('The value of i is larger than 3', normal),
+            Paragraph('The value of i is not larger than 3', normal)),
+      DocIf('i==3', Paragraph('The value of i is equal to 3', normal),
+            Paragraph('The value of i is not equal to 3', normal)),
+      DocIf('i<3', Paragraph('The value of i is less than 3', normal),
+            Paragraph('The value of i is not less than 3', normal)),
+      DocWhile('i', [DocPara('i', format='The value of i is %(__expr__)d', style=normal), DocExec('i-=1')]),
+      DocPara(
+        '"{"+", ".join(("%s=%s" % (_k,(_v.__class__.__name__ if "<" in repr(_v) else repr(_v)[1:] if repr(_v) and repr(_v)[0] in "ub" else repr(_v))) for _k,_v in sorted(doc._nameSpace.items()) if _k not in ("_k","_v")))+"}"',
+        escape=True),
+      DocPara('doc.canv.getPageNumber()', 'The current page number is %(__expr__)d', style=normal)
+    ]
+    doc=SimpleDocTemplate(fn)
+    doc.build(story)
+
+  def testBarcode():
+    # /home/zamofing_t/Documents/prj/Mokabu/scratch/reportlab/tests/test_graphics_barcode.py
+    txt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n\nCHF\n\n\n\n\n\n\n\nNON\n\n\nEPD'''
+    txt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n1234.00\nCHF\nS\nPersZahlung\nStrasseZahlung\n\n5430\nWettingen\nCH\nNON\n\nMitteilung\nEPD'''
+    fmt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\nS\n\n\n\n\n\n\nNON\n\n%s\nEPD'''
+    txt=fmt%(1234, 'Mitteilung')
+    # https://www.paymentstandards.ch/dam/downloads/ig-qr-bill-de.pdf
+    # https://de.wikipedia.org/wiki/QR-Rechnung
+    # https://qr-rechnung.net/#/
+    from reportlab.graphics.shapes import Drawing
+    from reportlab.graphics.barcode import getCodes
+    outDir='/tmp/barcode'
+    os.makedirs(outDir, exist_ok=True)
+    i=getCodes()['QR'](txt)  # createBarcodeDrawing('QR',txt)
+    i.barWidth=300
+    i.barHeight=300
+
+    x0, y0, x1, y1=i.getBounds()
+    D=Drawing(x1-x0, y1-y0)
+    D.add(i)
+    D.save(formats=('gif',), outDir=outDir, fnRoot='QR')
+    print('gen '+outDir+'/QR.gif')
+    os.system('firefox '+outDir+'/QR.gif')
+    return
 
 
   def testInvoice(fn):
     lstKlient=\
-      ((None, 'Saki', 'Karakurt', 'Meierwiesenstrasse 24', '', '', 8123, 'Buchs', 'Bayraktar', 'Aras', '2012-02-15', '765.234.433.454'),
-      #(('Frau ','Saki','Karakurt','Meierwiesenstrasse 24','','','8107','Buchs','Bayraktar','Aras','2012-02-15','765.234.433.454 Frick'),
-        ('Familie', 'Preisig U. &', 'C.', 'Sihlaustr. 3', '', '', '8134', 'Adliswil', 'Radic Baumgartner', 'Ksenija', '1975-06-18', None),)
+      ((None, 'Meier', 'Olga', 'Meierwiesenstrasse 14', '', '', 8055, 'Wolishofen', 'Meier', 'Ursula', '2012-04-25', '765.123.456.464'),
+        ('Familie', 'Müller U. &', 'F.', 'Badstrasse 15', '', '', '8134', 'Adliswil', 'Franz Meier', 'Ksenija', '1976-04-18', None),)
     lstTpl=\
       (None,8,9,10,12)
       #(None,0,1,2,4,8)
@@ -849,15 +881,15 @@ if __name__ == '__main__':
     #build(self, tplID, lstErb, klient, datRng, behandlungen):
     #rep.build(0x08,'MK_A',lstKlient[0],lstRng[0],lstBeh[0])
     rep.build(0x28,'MK_A',lstKlient[0],lstRng[0],lstBeh[0])
-    #rep.build(0x38,'MK_A',lstKlient[0],lstRng[0],lstBeh[0])
+    rep.build(0x38,'MK_A',lstKlient[0],lstRng[0],lstBeh[0])
 
 
     rep.publish()
 
   def testTherapyProgress(fn):
     lstKlient=\
-      (('Bayraktar', 'Aras', '2012-02-15', '', ''),
-       ('Radic Baumgartner', 'Ksenija', '1975-06-18', '', ''),)
+      (('Biffiger', 'Franz', '2012-02-15', '', ''),
+       ('Roman Baumgartner', 'Rudolph', '1978-03-08', '', ''),)
     lstBeh=\
         ((('2020-05-15', 'title00', lorIps),('2020-05-22', 'title01', lorIps),('2020-05-29', 'title02', lorIps),('2020-06-03', 'title03', lorIps),('2020-06-03', 'title03', lorIps),('2020-06-03', 'title03', lorIps),('2020-06-03', 'title03', lorIps)),
          (('2020-06-19', 'title10', lorIps),('2020-07-31', 'title11', lorIps),('2020-07-31', 'title12', '')))

@@ -33,9 +33,8 @@ class MoKaBu:
                    'SELECT COUNT(*) FROM Account',
                    'SELECT COUNT(*) FROM EventLog',
                    'SELECT COUNT(*) FROM EventType'):
-          _log.debug(sql+' -> ',end='')
           for row in dbc.execute(sql):
-            _log.debug(row)
+            _log.debug(f'{sql} -> {row}')
     except lite.Error as e:
         _log.error("Error %s:" % e.args[0])
         sys.exit(1)
@@ -105,7 +104,7 @@ class MoKaBu:
       try:
         krzLstErb= self._lut._krzLstErb
       except AttributeError:
-        if int(recRng[9])<8000: #PLZ is not in ZH
+        if recRng[9] and int(recRng[9])<8000: #PLZ is not in ZH
           krzLstErb='MK_A'
         else:
           krzLstErb='MK_Z'
@@ -201,7 +200,7 @@ class MoKaBu:
 
 
 if __name__=='__main__':
-  logging.basicConfig(level=logging.WARNING, format='%(levelname)s:%(module)s:%(lineno)d:%(funcName)s:%(message)s ')
+  logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(module)s:%(lineno)d:%(funcName)s:%(message)s ')
   import argparse
   parser = argparse.ArgumentParser()
   parser.add_argument('-m', '--mode', type=int, help='mode bits', default=0x0)
