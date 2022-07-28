@@ -284,15 +284,15 @@ class Invoice():
         TarZif='PA010'
         _log.warning(f'No TarifZiffer -> use default :{TarZif}')
       anz=Dauer
+      tptl=Stundenansatz/60
       try:
         tz=lut.tar_zif(TarZif)
       except:
         _log.error(f'Wrong TarifZiffer:{TarZif}')
-        tptl=Stundenansatz/60
         pBemerkung=''
       else:
         pBemerkung=rlp.Paragraph('<font size="8"><b>'+tz[1]+'</b></font>',styN)
-        tptl=tz[0]
+        assert(tptl==tz[0])
       tot=anz*tptl
       totSum+=tot
       #if Bemerkung:
