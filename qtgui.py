@@ -1303,8 +1303,12 @@ class WndTreatment(WndSqlBase):
       w=self._fldLst[5]
       assert(w.windowTitle()=='costPerHour')
       lut=qtw.QApplication.instance().mkb._lut
-      tz=lut.tar_zif(kv[0])
-      w.setText(f'{float(tz[0])*60:0.2f}')
+      try:
+        tz=lut.tar_zif(kv[0])
+      except KeyError as e:
+        _log.debug(f"Can't update costPerHour:  {e}")
+      else:
+        w.setText(f'{float(tz[0])*60:0.2f}')
     cb.blockSignals(False)
 
   def OnWndTreatment(self):

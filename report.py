@@ -27,6 +27,7 @@ bitmask for mode:
               3: Offizielles Format mit Tarifziffer etc. (allgemein)
 '''
 import logging
+logging.getLogger('PIL.PngImagePlugin').setLevel(logging.WARNING)
 _log=logging.getLogger(__name__)
 
 import time,os,platform,re,sys
@@ -42,6 +43,7 @@ import reportlab.lib.pagesizes as rlps
 import reportlab.pdfgen as rlpg
 import reportlab.pdfbase as rlpb
 import reportlab.pdfbase.ttfonts #else not visible
+
 
 from TarZif import Lut
 
@@ -126,6 +128,9 @@ class Invoice():
     self._lstErb=self._lut.lst_erb(krzLstErb)
 
     if tplID==None:tplID=0x08
+    if type(tplID)!=int:
+      _log.warning(f'{tplID} {type(tplID)}')
+      tplID=0x08
 
     fmt=(tplID>>4)&0x3
     if fmt in (0,1):
@@ -292,7 +297,7 @@ class Invoice():
         pBemerkung=''
       else:
         pBemerkung=rlp.Paragraph('<font size="8"><b>'+tz[1]+'</b></font>',styN)
-        assert(tptl==tz[0])
+        _log.warning(tptl==tz[0])
       tot=anz*tptl
       totSum+=tot
       #if Bemerkung:

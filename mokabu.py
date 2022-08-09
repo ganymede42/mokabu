@@ -1,5 +1,21 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
+# *-----------------------------------------------------------------------*
+# |                                                                       |
+# |  Copyright (c) 2022 by Thierry Zamofing  (th.zamofing@gmail.com)      |
+# |                                                                       |
+# *-----------------------------------------------------------------------*
 # -*- coding: utf-8 -*-
+'''
+Mokabu:
+Burchhaltung für Krankenkassenabrechnung
+
+bitmask for mode:
+  0x01: report_invoice (all)
+  0x02: report_therapy_progress (all)
+  0x04: sync_invoice (test)
+
+
+'''
 
 #https://www.w3schools.com/sql/sql_join.asp
 import logging
@@ -13,6 +29,8 @@ from TarZif import Lut
 class MoKaBu:
 
   def __init__(self,fn='mokabu.db',lstErb=None):
+    if not os.path.exists(fn):
+      self.reset(fn)
     self.open(fn)
     self._lut=lut=Lut()
     lut.open(lstErb)
@@ -46,14 +64,16 @@ class MoKaBu:
         _log.error("Error %s:" % e.args[0])
 
 
-  def reset(self):
+  def reset(self,fn):
+    schema='mokabu.schema.sql'
+    _log.warning(f'database {fn} does not exist. It will be build according to schema {schema}')
     try:
-      schema='mokabu.schema.sql'
-      dbc=self.dbc
+      db=lite.connect(fn)
+      dbc=db.cursor()
       fh=open(schema,'r')
       dbc.executescript(fh.read())
     except lite.Error as e:
-        print(schema+" Error %s:" % e.args[0])
+        _log.error(schema+" Error %s:" % e.args[0])
 
   def report_invoice(self, sqlFilt=None,fn='invoice.pdf',pkInvoice=None):
     #if pkInvoice is set, the filter and the filename is generated
@@ -200,17 +220,20 @@ class MoKaBu:
 
 
 if __name__=='__main__':
-  logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(module)s:%(lineno)d:%(funcName)s:%(message)s ')
   import argparse
-  parser = argparse.ArgumentParser()
-  parser.add_argument('-m', '--mode', type=int, help='mode bits', default=0x0)
+  epilog=__doc__ #+'\nExamples:'+''.join(map(lambda s:cmd+s, exampleCmd))+'\n'
+  parser=argparse.ArgumentParser(epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
+  parser.add_argument('-m', '--mode', type=lambda x: int(x,0), help='mode (see bitmasks) default=0x%(default)x', default=0x0)
+  parser.add_argument("--database", help="database file", default='mokabu.db')
+  parser.add_argument("-l", "--loglevel", type=int, help="50:Critical 4:Error 3:Warning 2:Info 1:DEBUG default=%(default)u", default=2)
   parser.add_argument('--lstErb', help='Kürzel Leistungserbringer', default=None)
   args = parser.parse_args()
   _log.debug(args)
-  mkb=MoKaBu('mokabu.db',args.lstErb)
-  #mkb.open()
-  #mkb.reset()
-  #mkb.populate()
+  #logging.basicConfig(level=logging.DEBUG, format='%(name)s%(levelname)s:%(module)s:%(lineno)d:%(funcName)s:%(message)s ')
+  logging.basicConfig(level=args.loglevel*10, format='%(levelname)s:%(module)s:%(lineno)d:%(funcName)s:%(message)s ')
+
+
+  mkb=MoKaBu(args.database,args.lstErb)
   if args.mode&1:
     mkb.report_invoice();exit(0)
   if args.mode&2:

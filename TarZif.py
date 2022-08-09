@@ -70,13 +70,7 @@ PN010	Administrativer Notfallaufwand, im Zeitraum 07:00-19:00 Uhr wochentags	"Gi
 PN020	Notfallzuschlag 20%, Freitag 19:00 Uhr bis Montag 07:00 Uhr, wochentags 19:00 Uhr bis 07:00 Uhr und an gesetzlichen Feiertagen, prozentual	"Zuschlag zu Therapie oder Diagnostik im Notfall an Wochenenden (Freitag 19:00 Uhr bis Montag 07:00 Uhr) und Feiertagen sowie 19:00 bis 07:00 Uhr. Gilt für Behandlung, psychotherapeutisch notwendig und vom Patienten, Angehörigen oder Dritten als notwendig erachtet. Dabei kann es sich um eine plötzlich entstandene Krise, eine Selbst- oder eine Fremdgefährdung oder eine Dekompensation des Patienten handeln. Der Psychotherapeut befasst sich unverzüglich nach Kenntnisnahme des Notfalls mit dem Patienten. Es wird ein direkter und unmittelbarer Therapeut-Patient-Kontakt vorausgesetzt, unabhängig von der Örtlichkeit. Die Konsultation kann auch fernmündlich erfolgen. Die Behandlung von ordentlich angemeldeten Patienten gilt nicht als Notfall, auch wenn sie in diesem Zeitraum erfolgen. Behandlung von nicht angemeldeten Patienten gilt nicht generell als Notfall und berechtigt nicht generell zur Verrechnung des Notfallzuschlags."
 PW	Weg und Material (gelten für Therapieleistungen gemäss Art. 11b Abs.1 lit. a und lit. b KLV)
 PW010	Wegentschädigung beim Patientenkontakt ausserhalb der Behandlungsräume, pro 1 Min. 	Effektive Wegzeit (An- und Rückreise). Bei einem vergeblichen Aufsuchen kann die Wegzeit abgerechnet werden, sofern eine nachweisbare therapeutische Indikation zur Abwesenheit des Patienten führte. Beim Aufsuchen von mehreren Patienten in der gleichen Tour kann nur der Ortswechsel abgerechnet werden. Wegzeiten dürfen nur abgerechnet werden, wenn die Situation, das Befinden und/oder das Störungsbild des Patienten die Behandlung ausserhalb der Behandlungsräumlichkeiten erfordert. Durch Psychologische Psychotherapeuten oder Organisationen der psychologischen Psychotherapeuten, die ausschliesslich aufsuchend tätig sind, nicht abrechenbar.
-PW020	Für die Therapie und Diagnostik benötigtes zusätzliches Testmaterial, CHF	Verbrauchsmaterial ist separat zu erfassen, sofern der Einkaufspreis pro Einzelstück grösser Fr. 20.-. Für die Therapie und Diagnostik benötigtes, für den Patienten spezifisch eingekauftes Testmaterial zum einmaligen Gebrauch - Beispielsweise Testbögen, Onlinetestungen und -auswertungen.
-752.34	SAMPLE 1
-752.35	SAMPLE 2
-752.36	SAMPLE 3
-752.37	SAMPLE 4
-752.38	SAMPLE 5
-752.39	SAMPLE 6\
+PW020	Für die Therapie und Diagnostik benötigtes zusätzliches Testmaterial, CHF	Verbrauchsmaterial ist separat zu erfassen, sofern der Einkaufspreis pro Einzelstück grösser Fr. 20.-. Für die Therapie und Diagnostik benötigtes, für den Patienten spezifisch eingekauftes Testmaterial zum einmaligen Gebrauch - Beispielsweise Testbögen, Onlinetestungen und -auswertungen.\
 '''
 
 class Lut:
