@@ -127,7 +127,8 @@ class Invoice():
     #lstErb Leistungserbringer
     self._lstErb=self._lut.lst_erb(krzLstErb)
 
-    if tplID==None:tplID=0x08
+    #if tplID==None:tplID=0x08
+    if tplID==None:tplID=0x28
     if type(tplID)!=int:
       _log.warning(f'{tplID} {type(tplID)}')
       tplID=0x08
@@ -175,12 +176,12 @@ class Invoice():
       monika.kast-perry@psychologie.ch · praxis-weiterkommen.com</font>'''
       p=rlp.Paragraph(txt, styR)
       story.append(rlp.Paragraph(txt,styR))
-      txt='''<font size="15"><b>Rückfoderungsbeleg</b><br/></font>'''
+      txt='''<font size="15"><b>TP-Rechnung</b><br/></font>'''
       story.append(rlp.Spacer(1,-22))
       story.append(rlp.Paragraph(txt,styN))
       story.append(rlp.Spacer(1,12))
     else:
-      txt='''<font size="15"><b>Rückfoderungsbeleg</b><br/></font>'''
+      txt='''<font size="15"><b>TP-Rechnung</b><br/></font>'''
       story.append(rlp.Paragraph(txt,styN))
       story.append(rlp.Spacer(1,12))
 
@@ -214,9 +215,9 @@ class Invoice():
     ZSR=lstErb['ZSR']
 
     data=[('Rechnungs-','GLN-Nr. (B)',GLN,f'{vorname} {name}', 'E-mail:',email),
-          ('steller',   'ZSR-Nr. (B)',ZSR,f'{adr} {plz} {ort}','Tel:',   tel),
-          ('Leistungs-','GLN-Nr. (B)',GLN,f'{vorname} {name}', 'E-mail:',email),
-          ('erbringer', 'ZSR-Nr. (B)',ZSR,f'{adr} {plz} {ort}','Tel:',   tel)]
+          ('steller',   'ZSR-Nr. (B)',ZSR,f'{adr} - {plz} {ort}','Tel:',   tel),
+          ('Leistungs-','GLN-Nr. (P)',GLN,f'{vorname} {name}', 'E-mail:',email),
+          ('erbringer', 'ZSR-Nr. (P)',ZSR,f'{adr} - {plz} {ort}','Tel:',   tel)]
     t=rlp.Table(data,colWidths=(60,60,70,140,40,140,))
     tblStyle=rlp.TableStyle([#('INNERGRID',(0,0),(-1,-1),0.15,rll.colors.black),
                              ('BOX',(0,0),(-1,-1),0.15,rll.colors.black),
@@ -237,7 +238,7 @@ class Invoice():
       kGeb=''
 
     data=[
-    ('Patient/Klient-','Name'             ,kNa,),
+    ('Patient'        ,'Name'             ,kNa,),
     (''               ,'Vorname'          ,kVo,),
     (''               ,'Strasse'          ,rAdr),
     (''               ,'PLZ'              ,rPlz),
@@ -261,6 +262,32 @@ class Invoice():
     t.hAlign='LEFT'
     t.setStyle(tblStyle)
     story.append(t)
+
+    data=[('Diagnose','F'),]
+    t=rlp.Table(data,colWidths=(60+60,70+140+40+140,))
+    tblStyle=rlp.TableStyle([#('INNERGRID',(0,0),(-1,-1),0.15,rll.colors.black),
+                             ('BOX',(0,0),(-1,-1),0.15,rll.colors.black),
+                             ('FONTSIZE',(0,0), (-1,-1),8),
+                             ('TOPPADDING',(0,0), (-1,-1),0),
+                             ('BOTTOMPADDING',(0,0), (-1,-1),0),
+                             ])
+    t.hAlign='LEFT'
+    t.setStyle(tblStyle)
+    story.append(t)
+
+    data=[('GLN-Liste','1/'+GLN),]
+    t=rlp.Table(data,colWidths=(60+60,70+140+40+140,))
+    tblStyle=rlp.TableStyle([#('INNERGRID',(0,0),(-1,-1),0.15,rll.colors.black),
+                             ('BOX',(0,0),(-1,-1),0.15,rll.colors.black),
+                             ('FONTSIZE',(0,0), (-1,-1),8),
+                             ('TOPPADDING',(0,0), (-1,-1),0),
+                             ('BOTTOMPADDING',(0,0), (-1,-1),0),
+                             ])
+
+    t.hAlign='LEFT'
+    t.setStyle(tblStyle)
+    story.append(t)
+
 
     story.append(rlp.Spacer(1,40))
 

@@ -116,6 +116,10 @@ Deploy
 ```
 rm /tmp/mokabu.zip; zip /tmp/mokabu.zip *.py  mokabu.db
 unzip -l /tmp/mokabu.zip
+
+cd C:\Users\monik\Documents\Praxis\Mokabu\
+git fetch github_https master
+git reset github_https/master --hard
 ```
 
 SCRATCH
