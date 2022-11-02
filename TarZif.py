@@ -28,6 +28,19 @@ lutLstErb={
     'GLN':7601007566037,
     'UID': 'CHE327073453',
     'ZSR':'D749131',
+  },
+  'TA_R':{
+    'vorname': 'Tanja',
+    'name': 'Rom',
+    'email': 'tanja.rom@gmail.com',
+    'telM': '+41 76 563 72 72',
+    'adr': 'Häringstrasse 20',
+    'plz':'8001',
+    'ort': 'Zürich',
+    'qrFmt':'SPC\n0200\n1\nCH0600700112700738038\nS\nTanja Rom\nHäringstrasse 20\n\n8001\nZürich\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\n\n\n\n\n\n\n\nNON\n\n%s\nEPD',
+    'GLN':7601003944099,
+    'UID': 'CHE320888520',
+    'ZSR':'S633931',
   }
 }
 
