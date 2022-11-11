@@ -141,6 +141,7 @@ class Invoice():
     self.canvas.showPage()
 
   def buildTarZif(self,tplID,klient,rng,beh):
+    tplMahnung=tplID&0x3
     canvas=self.canvas
     styles=self.styles
     styN=styles['Normal']
@@ -350,8 +351,19 @@ class Invoice():
 
     story.append(rlp.Spacer(1,12))
     if (tplID>>4)&0x3 == 2: # format Monika Kast
-      txt='''Ich bitte Sie, den Betrag von SFr. %.2f innert 30 Tagen auf folgendes Konto zu überweisen:<br/>
-      St. Galler Kantonalbank, IBAN-Nr. CH60 0078 1622 4188 6200 0<br/>'''%totSum
+      if tplMahnung==1:
+        txt='<b>Zahlungserinnerung</b><br/>Es dürfte Ihrer Aufmerksamkeit entgangen sein, dass die nachstehend aufgeführten Rechnungsposten noch offen sind. Ich bitte Sie, die fälligen Rechnungsbeträge innert 10 Tagen einzuzahlen und danke Ihnen für die fristgerechte Überweisung. Sollte sich Ihre Zahlung mit diesem Schreiben gekreuzt haben, betrachten Sie es bitte als gegenstandslos.<br/><br/>'
+        txt+='Bitte überweisen Sie, den Betrag von SFr. %.2f auf folgendes Konto:<br/>'\
+             'St. Galler Kantonalbank, IBAN-Nr. CH60 0078 1622 4188 6200 0<br/>'%totSum
+
+      elif tplMahnung==2:
+        txt='<b>2. Mahnung</b><br/>Den unten stehenden Rechnungsposten haben Sie trotz Zahlungserinnerung nicht bezahlt. Sie ersparen sich Unannehmlichkeiten und weitere Kosten, wenn Sie den fälligen Betrag innert 15 Tagen überweisen. Sollte sich Ihre Zahlung mit diesem Schreiben gekreuzt haben, betrachten Sie es bitte als gegenstandslos.<br/><br/>'
+        txt+='Bitte überweisen Sie, den Betrag von SFr. %.2f auf folgendes Konto:<br/>'\
+             'St. Galler Kantonalbank, IBAN-Nr. CH60 0078 1622 4188 6200 0<br/>'%totSum
+      else:
+        txt='''Ich bitte Sie, den Betrag von SFr. %.2f innert 30 Tagen auf folgendes Konto zu überweisen:<br/>
+        St. Galler Kantonalbank, IBAN-Nr. CH60 0078 1622 4188 6200 0<br/>'''%totSum
+
       story.append(rlp.Spacer(1,12))
       story.append(rlp.Paragraph(txt,styN))
       txt='''Herzlichen Dank und freundliche Grüsse'''
@@ -380,7 +392,8 @@ class Invoice():
 
 
     if (tplID)&0x8:
-      txt=lstErb['qrFmt']%(totSum,dateconvert(datRng)+' '+klient[8]+' '+klient[9])
+      # (193.5, '15.08.2022 Roger Meyer')
+      txt=lstErb['qrFmt']%(totSum,dateconvert(rng[1])+' '+klient[8]+' '+klient[9])
       from reportlab.graphics.shapes import Drawing
       from reportlab.graphics.barcode import getCodes
       outDir='/tmp/barcode'
