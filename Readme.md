@@ -42,7 +42,7 @@ z.B.
   8+32=40 -> Offizielles Format mit Tarifziffer etc. für Monika Kast mit QR-Code
   8+48=56 -> Offizielles Format mit Tarifziffer etc. (allgemein) mit QR-Code
 
-default is 8.
+default is 0x28(=40) for Monika and 0x38(=56) as default
 ```
 
 Erstellen neuer Rechnungen
@@ -145,3 +145,27 @@ git -C /tmp/Mokabu/data init
 git filter-repo --path cleanupKlienten2020.txt --path mokabu.db --path populate.sql --replace-refs delete-no-add --source ~/Documents/prj/Mokabu --target /tmp/Mokabu/data
 git -C /tmp/Mokabu/data replace -d `git -C /tmp/Mokabu/data replace`
 ```
+
+Strukturumbau (31.3.23)
+-----------------------
+```
+
+lstName
+
+ivcAddress -> ivcAddress||COALESCE('|'||ivcAddress1,'')||COALESCE('|'||ivcAddress2,''),
+ivcZipCode -> zipCode
+ivcCity -> city
+cltLstName -> lstName
+cltFstName -> fstName
+cltAhvNr -> ahvNr
+cltDtBirth -> dtBirth
+
+sed -r -i \
+  -e 's/\bzipCode\b/ivcZipCode/g' \
+  -e 's/\bcity\b/ivcCity/g' \
+  -e 's/\blstName\b/cltLstName/g' \
+  -e 's/\bfstName\b/cltFstName/g' \
+  -e 's/\bahvNr\b/cltAhvNr/g' \
+  -e 's/\bdtBirth\b/cltDtBirth/g' \
+   *.py
+

@@ -374,7 +374,7 @@ class MainWindow(QMainWindow):
     mkb=app.mkb
     self.pkBehandlung=pkBehandlung
 
-    txt=mkb.dbc.execute('SELECT lstName,fstName,dtTreatment,document FROM Treatment tr '
+    txt=mkb.dbc.execute('SELECT cltLstName,cltFstName,dtTreatment,document FROM Treatment tr '
                         'LEFT JOIN Person ps ON tr.fkPerson=ps.id '
                         'WHERE tr.id=?',(pkBehandlung,)).fetchone()
     if txt is not None:

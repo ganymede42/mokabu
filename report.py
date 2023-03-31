@@ -125,6 +125,9 @@ class Invoice():
 
   def build(self,tplID,krzLstErb,klient,rng,behandlungen):
     #lstErb Leistungserbringer
+    #klient: ivcPrefix,ivcLstName,ivcFstName,ivcAddress,ivcZipCode,ivcCity,
+    #        cltPrefix,cltLstName,cltFstName,cltAddress,cltZipCode,cltCity,cltDtBirth,cltAhvNr
+
     self._lstErb=self._lut.lst_erb(krzLstErb)
 
     #if tplID==None:tplID=0x08
@@ -235,7 +238,7 @@ class Invoice():
     t.setStyle(tblStyle)
     story.append(t)
 
-    rAnr,rNa,rVo,rAdr,rAdr2,rAdr3,rPlz,rOrt,kNa,kVo,kGeb,kAhv=klient
+    rAnr,rNa,rVo,rAdr,rPlz,rOrt,kAnr,kNa,kVo,kAdr,kPlz,kOrt,kGeb,kAhv=klient
     try:
       kGeb=time.strptime(kGeb,'%Y-%m-%d')
       kGeb=time.strftime('%d.%m.%Y',kGeb)
@@ -245,9 +248,9 @@ class Invoice():
     data=[
     ('Patient'        ,'Name'             ,kNa,),
     (''               ,'Vorname'          ,kVo,),
-    (''               ,'Strasse'          ,rAdr),
-    (''               ,'PLZ'              ,rPlz),
-    (''               ,'Ort'              ,rOrt),
+    (''               ,'Strasse'          ,kAdr),
+    (''               ,'PLZ'              ,kPlz),
+    (''               ,'Ort'              ,kOrt),
     (''               ,'Geburtsdatum'     ,kGeb),
     (''               ,'AHV-Nr'           ,kAhv,),
     #(''               ,'Geschlecht'      ,''),
@@ -417,22 +420,19 @@ class Invoice():
 
     frm.addFromList(story,canvas)
 
-
     story=[]
     # 11.3 4.6
     if (tplID>>4)&0x3 == 2: # format Monika Kast
-      frm=rlp.Frame(12*rlu.cm, sz[1]-8.7*rlu.cm, 5*rlu.cm, 2.5*rlu.cm, showBoundary=0)
+      frm=rlp.Frame(12*rlu.cm, sz[1]-8.7*rlu.cm, 7*rlu.cm, 2.5*rlu.cm, showBoundary=0)
     else:
       frm=rlp.Frame(12*rlu.cm, sz[1]-7.0*rlu.cm, 5*rlu.cm, 2.5*rlu.cm, showBoundary=0)
 
-    #rAnr,rNa,rVo,rAdr,rAdr2,rAdr3,rPlz,rOrt,kNa,kVo,kGeb,kAhv=klient
     txt=''
     if rAnr:
       txt+=rAnr+' '
     txt+=f'{rVo} {rNa}<br/>'
-    for adr in (rAdr,rAdr2,rAdr3):
-      if adr:
-        txt+=adr+'<br/>'
+    for adr in rAdr.split('|'):
+      txt+=adr+'<br/>'
     txt+=f'{rPlz} {rOrt}<br/>'
     story.append(rlp.Paragraph(txt,styN))
     frm.addFromList(story, canvas)
@@ -443,7 +443,7 @@ class Invoice():
 
   def buildOrig(self,tplID,klient,datRng,behandlungen):
     tplMahnung=tplID&0x3
-    tplIV=(tplID)&0x4
+    tplIV=(tplID)&0x10
     tplQR=(tplID)&0x8
 
     canvas=self.canvas
@@ -467,6 +467,9 @@ class Invoice():
     im.hAlign='RIGHT'
     story.append(im)
     story.append(rlp.Spacer(1,12))
+
+    rAnr,rNa,rVo,rAdr,rPlz,rOrt,kAnr,kNa,kVo,kAdr,kPlz,kOrt,kGeb,kAhv=klient
+
     txt='''<font size="7"><b>Monika Kast Perry</b><br/>
     Dr. phil., Fachpsychologin<br/>
     für Kinder- & Jugendpsychologie FSP<br/>
@@ -475,14 +478,10 @@ class Invoice():
     monika.kast-perry@psychologie.ch · praxis-weiterkommen.com</font>'''
     story.append(rlp.Paragraph(txt,styR))
     story.append(rlp.Spacer(1,-24))
-    txt='''
-    %s<br/>
-    %s %s<br/>'''%tuple(map(lambda x: x if x else '',klient[0:3]))
-    for i in range(3,6):
-      adr=klient[i]
-      if adr: # not None and not empty
-        txt+=adr+'<br/>'
-    txt+='%s %s<br/>'''%tuple(map(lambda x: x if x else '',klient[6:8]))
+    txt=f'''\
+    {rAnr} {rNa} {rVo}<br/>
+    {rAdr}<br/>
+    {rPlz} {rOrt}<br/>'''
     story.append(rlp.Paragraph(txt,styN))
     story.append(rlp.Spacer(1,24+24))
     txt='Birr, %s'%dateconvert(datRng)
@@ -496,22 +495,12 @@ class Invoice():
     else:
       txt='<b>Rechnung für</b>'
 
-    txt+='<br/><br/><b>%s %s'%(klient[8:10])
+    txt+=f'<br/><br/><b>{kVo} {kNa}'
 
-    geb=klient[10]
-    ahvOrt=klient[11]
-    if ahvOrt:
-      ahvOrt=ahvOrt.split(maxsplit=1)
-      if len(ahvOrt)==1:
-        ahvOrt.append(None)
-      ahv,ort=ahvOrt
-    else:
-      ahv=ort=None
-
-    if tplIV and ort:
-      txt+=', '+ort
-    if geb is not None: txt+=', geb: %s'%dateconvert(geb)
-    if ahv is not None: txt+=', AHV-Nr: %s'%ahv
+    if tplIV and rOrt:
+      txt+=', '+rOrt
+    if kGeb is not None: txt+=', geb: %s'%dateconvert(kGeb)
+    if kAhv is not None: txt+=', AHV-Nr: %s'%kAhv
     txt+='</b>'
     story.append(rlp.Paragraph(txt,styJ))
 

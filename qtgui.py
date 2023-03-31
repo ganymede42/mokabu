@@ -418,14 +418,14 @@ class WndQuickSelect(qtw.QTableWidget):
     dbc=qtw.QApplication.instance().mkb.db.cursor()
     if self.filtMode==0:
       sqlCmd=\
-      '''SELECT tr.fkPerson,tr.id,tr.fkInvoice,ps.fstName||' '||ps.lstName as fstLst,tr.dtTreatment,iv.dtInvoice,tr.duration,tr.comment
+      '''SELECT tr.fkPerson,tr.id,tr.fkInvoice,ps.cltFstName||' '||ps.cltLstName as fstLst,tr.dtTreatment,iv.dtInvoice,tr.duration,tr.comment
              FROM treatment tr
              LEFT JOIN Person ps on tr.fkPerson=ps.id
              LEFT JOIN Invoice iv on tr.fkInvoice=iv.id
              ORDER BY tr.dtTreatment DESC'''
     elif self.filtMode==1:
       sqlCmd=\
-      '''SELECT tr.fkPerson,tr.id,tr.fkInvoice,ps.fstName||' '||ps.lstName as fstLst,tr.dtTreatment,iv.dtInvoice,tr.duration,tr.comment
+      '''SELECT tr.fkPerson,tr.id,tr.fkInvoice,ps.cltFstName||' '||ps.cltLstName as fstLst,tr.dtTreatment,iv.dtInvoice,tr.duration,tr.comment
              FROM treatment tr
              LEFT JOIN Person ps on tr.fkPerson=ps.id
              LEFT JOIN Invoice iv on tr.fkInvoice=iv.id
@@ -433,7 +433,7 @@ class WndQuickSelect(qtw.QTableWidget):
               ORDER BY tr.fkPerson,tr.dtTreatment DESC'''
     else:
       sqlCmd=\
-      '''SELECT tr.fkPerson,tr.id,tr.fkInvoice,ps.fstName||' '||ps.lstName as fstLst,tr.dtTreatment,iv.dtInvoice,tr.duration,tr.comment
+      '''SELECT tr.fkPerson,tr.id,tr.fkInvoice,ps.cltFstName||' '||ps.cltLstName as fstLst,tr.dtTreatment,iv.dtInvoice,tr.duration,tr.comment
              FROM treatment tr
              LEFT JOIN Person ps on tr.fkPerson=ps.id
              LEFT JOIN Invoice iv on tr.fkInvoice=iv.id
@@ -627,7 +627,7 @@ class WndSyncIvcAcc(qtw.QWidget):
     dbc=qtw.QApplication.instance().mkb.db.cursor()
     tbIvc=self.tbIvc
     sqlData=dbc.execute(\
-    '''SELECT iv.id,COUNT(tr.id) AS cntTrt,fkAccount,dtInvoice,ivcLstName,ivcFstName,SUM(duration*costPerHour/60) AS cost,iv.comment,lstName,fstName
+    '''SELECT iv.id,COUNT(tr.id) AS cntTrt,fkAccount,dtInvoice,ivcLstName,ivcFstName,SUM(duration*costPerHour/60) AS cost,iv.comment,cltLstName,cltFstName
        FROM Treatment tr LEFT JOIN Invoice iv  ON tr.fkInvoice=iv.id
        LEFT JOIN Person ps ON iv.fkPerson=ps.id
        WHERE iv.id NOT NULL
@@ -651,8 +651,8 @@ class WndSyncIvcAcc(qtw.QWidget):
 # 5 ivcFstName
 # 6 cost
 # 7 iv.comment
-# 8 lstName
-# 9 fstName
+# 8 cltLstName
+# 9 cltFstName
     col=qtg.QColor(196,255,196)  #qtg.QColor('yellow')
     for ir,row in enumerate(sqlData):
       pkIvc=row[0];idx2ivc.append(pkIvc)
@@ -987,26 +987,33 @@ class WndPerson(WndSqlBase):
     self._fldLst=fldLst=list()
 
     fld2lbl={
-      'ivcPrefix':'Anrede',
+      'cltPrefix' :'Patient Anrede',
+      'cltLstName':'Patient Name',
+      'cltFstName':'Patient Vorname',
+      'cltAddress':'Patient Adresse',
+      'cltZipCode':'Patient PLZ',
+      'cltCity'   :'Patient Ort',
+      'cltAhvNr'  :'Patient AHV-Nr.',
+      'cltDtBirth':'Patient Geburtsdatum',
+
+      'ivcPrefix' :'Rng Anrede',
       'ivcLstName':'Rng Name',
       'ivcFstName':'Rng Vorname',
       'ivcAddress':'Rng Adresse',
-      'ivcAddress1':'Rng Adresse1',
-      'ivcAddress2':'Rng Adresse2',
-      'zipCode':'PLZ',
-      'city':'Ort',
-      'lstName':'Patient Name',
-      'fstName':'Patient Vorname',
-      'phone': 'Telefon',
-      'phone1':'Telefon1',
-      'phone2':'Telefon2',
-      'dtBirth':'Geburtsdatum',
-      'ahvNr':'AHV-Nr.',
-      'comment':'Bemerkung'
+      'ivcZipCode':'Rng PLZ',
+      'ivcCity'   :'Rng Ort',
+
+      'phone'  :'Telefon',
+      'phone1' :'Telefon1',
+      'phone2' :'Telefon2',
+      'eMail'  :'eMail',
+      'eMail1' :'eMail1',
+      'eMail2' :'eMail2',
+      'comment':'Bemerkung',
     }
-    for desc in ('id','ivcPrefix','ivcLstName','ivcFstName','ivcAddress','ivcAddress1','ivcAddress2','zipCode','city','lstName',
-                 'fstName','phone','phone1','phone2','dtBirth','eMail','eMail1','eMail2','ahvNr',
-                 ('comment',qtw.QTextEdit) ):
+    for desc in ('id','cltPrefix','cltLstName','cltFstName','cltAddress','cltZipCode','cltCity','cltAhvNr',('cltDtBirth',QDateEdit),
+                 'ivcPrefix','ivcLstName','ivcFstName','ivcAddress','ivcZipCode','ivcCity',
+                 'phone','phone1','phone2','eMail','eMail1','eMail2',('comment',qtw.QTextEdit) ):
       if type(desc)==str:
         w=self.SqlWidget(desc);fld=desc
       else:
@@ -1027,7 +1034,7 @@ class WndPerson(WndSqlBase):
     cb=self._cbNaVo
     cb.clear()
     dbc=qtw.QApplication.instance().mkb.db.cursor()
-    itemsNaVo=dbc.execute('SELECT id, lstName||" "||fstName FROM Person ORDER BY lstName,fstName').fetchall()
+    itemsNaVo=dbc.execute('SELECT id, cltLstName||" "||cltFstName FROM Person ORDER BY cltLstName,cltFstName').fetchall()
 
     cmpNaVo=[]
     setIdx=-1
@@ -1159,7 +1166,7 @@ class WndTreatment(WndSqlBase):
       title=sqlCombo
     elif fkPerson:
       dbc=qtw.QApplication.instance().mkb.db.cursor()
-      row=dbc.execute("SELECT fstName,lstName FROM Person WHERE id=?",(fkPerson,)).fetchone()
+      row=dbc.execute("SELECT cltFstName,cltLstName FROM Person WHERE id=?",(fkPerson,)).fetchone()
       title='Treatments: %s %s'%row
     else:
       title='Treatments'
@@ -1363,7 +1370,7 @@ class WndTreatment(WndSqlBase):
         qtw.QLineEdit.setText(w,(time.strftime('%d.%m.%y',time.gmtime())))
       elif t=='comment':
         dbc=qtw.QApplication.instance().mkb.db.cursor()
-        row=dbc.execute('SELECT fstName FROM Person WHERE id=%d'%fkPerson).fetchone()
+        row=dbc.execute('SELECT cltFstName FROM Person WHERE id=%d'%fkPerson).fetchone()
         w.setText('Therapie mit %s'%row[0])
       elif t=='costPerHour':
         pass
@@ -1478,7 +1485,7 @@ class WndInvoice(WndSqlBase):
       title=sqlCombo
     elif fkPerson:
       dbc=qtw.QApplication.instance().mkb.db.cursor()
-      row=dbc.execute("SELECT fstName,lstName FROM Person WHERE id=?",(fkPerson,)).fetchone()
+      row=dbc.execute("SELECT cltFstName,cltLstName FROM Person WHERE id=?",(fkPerson,)).fetchone()
       title='Invoices: %s %s'%row
     else:
       title='Invoices'
@@ -1663,7 +1670,7 @@ class WndMain(qtw.QMainWindow):
 
   def __init__(self):
     super(WndMain,self).__init__()
-    self.setGeometry(50,50,1300,800)
+    self.setGeometry(50,50,1300,900)
     self.setWindowTitle("MoKaBu")
     self.setWindowIcon(qtg.QIcon('logo_monika.ico'))
     #self.setWindowIcon(qtw.QIcon('pythonlogo.png'))

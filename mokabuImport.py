@@ -466,7 +466,7 @@ class ImportData:
 
     fh=open(fnSql,'w')
 
-    fh.write('INSERT INTO Person (id,ivcAnrede,ivcLstName,ivcFstName,ivcAddress,ivcAddress1,ivcAddress2,zipCode,city,lstName,fstName,dtBirth,ahvNr) VALUES\n')
+    fh.write('INSERT INTO Person (id,ivcAnrede,ivcLstName,ivcFstName,ivcAddress,ivcAddress1,ivcAddress2,ivcZipCode,ivcCity,cltLstName,cltFstName,cltDtBirth,cltAhvNr) VALUES\n')
     fh.write('('+'),\n('.join((map(lambda rec:','.join(map(lambda s:'NULL' if s is None else repr(s),rec)),dbKlient)))+');\n\n\n')
     #fh.write(',\n'.join(map(str,dbKlient)))
 
@@ -504,7 +504,7 @@ class ImportData:
 
     try:
       dbc.executemany(
-        'INSERT INTO Person (id,ivcPrefix,ivcLstName,ivcFstName,ivcAddress,ivcAddress1,ivcAddress2,zipCode,city,lstName,fstName,dtBirth,ahvNr) VALUES\n'\
+        'INSERT INTO Person (id,ivcPrefix,ivcLstName,ivcFstName,ivcAddress,ivcAddress1,ivcAddress2,ivcZipCode,ivcCity,cltLstName,cltFstName,cltDtBirth,cltAhvNr) VALUES\n'\
         '(?,?,?,?,?,?,?,?,?,?,?,?,?)',dbKlient)
 
       dbc.executemany(

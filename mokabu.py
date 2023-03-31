@@ -42,6 +42,12 @@ class MoKaBu:
         dbc.execute('SELECT SQLITE_VERSION()')
         data = dbc.fetchone()
         _log.debug("SQLite version: %s" % data)
+        dbc.execute("PRAGMA application_id")
+        data = dbc.fetchone()
+        _log.debug("schema version: %s" % data)
+        if data[0]!=1:
+          self.migrate(fn,data[0])
+
         #One way of permanently turning on foreign_keys by default is to inject the following line into ~/.sqliterc: PRAGMA foreign_keys = ON;
         dbc.execute("PRAGMA foreign_keys = 1")
         #dbc.execute("PRAGMA foreign_keys")
@@ -75,13 +81,28 @@ class MoKaBu:
     except lite.Error as e:
         _log.error(schema+" Error %s:" % e.args[0])
 
+  def migrate(self,fn,schema_id):
+    migrate=f'mokabu.migrate_{schema_id}.sql'
+    _log.warning(f'database {fn} needs migration.')
+    r=input('first create a backup of your database !!!\nWITHOUT A BACKUP ALL YOUR DATA CAN BE CORRUPTED!!!\nThem type "migrate" to start the migration process.\n>')
+    if r=='migrate':
+      try:
+        dbc=self.dbc
+        fh=open(migrate,'r')
+        dbc.executescript(fh.read())
+      except lite.Error as e:
+          _log.error(migrate+" Error %s:" % e.args[0])
+    else:
+      print('migration not done. exit mokabu')
+      sys.exit(1)
+
   def report_invoice(self, sqlFilt=None,fn='invoice.pdf',pkInvoice=None):
     #if pkInvoice is set, the filter and the filename is generated
     db=self.db
     dbc=self.dbc
     if pkInvoice:
       sqlFilt='iv.id=%d'%pkInvoice
-      sqlData=dbc.execute('SELECT fstName,lstName,dtInvoice,tplInvoice FROM Person ps LEFT JOIN Invoice iv ON ps.id=iv.fkPerson WHERE iv.id=%d'%pkInvoice).fetchone()
+      sqlData=dbc.execute('SELECT cltFstName,cltLstName,dtInvoice,tplInvoice FROM Person ps LEFT JOIN Invoice iv ON ps.id=iv.fkPerson WHERE iv.id=%d'%pkInvoice).fetchone()
       path='invoice'
       try:
         os.mkdir(path)
@@ -101,7 +122,9 @@ class MoKaBu:
 
     dbcRng=self.dbc
     dbcBeh=db.cursor()
-    sqlTplRng='''SELECT iv.id,tplInvoice,dtInvoice,ivcPrefix,ivcLstName,ivcFstName,ivcAddress,ivcAddress1,ivcAddress2,zipCode,city,lstName,fstName,dtBirth,ahvNr
+    sqlTplRng='''SELECT iv.id,tplInvoice,dtInvoice,
+    ivcPrefix,ivcLstName,ivcFstName,ivcAddress,ivcZipCode,ivcCity,
+    cltPrefix,cltLstName,cltFstName,cltAddress,cltZipCode,cltCity,cltDtBirth,cltAhvNr   
     FROM Invoice iv LEFT JOIN Person ps on iv.fkPerson=ps.id'''
     sqlTplOrd='ORDER BY iv.id'''
 
@@ -124,12 +147,10 @@ class MoKaBu:
       try:
         krzLstErb= self._lut._krzLstErb
       except AttributeError:
-        if recRng[9] and int(recRng[9])<8000: #PLZ is not in ZH
-          krzLstErb='MK_A'
-        else:
+        if recRng[13] and int(recRng[13])>=8000: #PLZ is in ZH
           krzLstErb='MK_Z'
-      ##if app..ar
-      ##  lstErb
+        else:
+          krzLstErb='MK_A'
       repIvc.build(recRng[1],krzLstErb,recRng[3:], (recRng[0],recRng[2]),dBeh)#  add(klient,tplID,datRng,behandlungen):
 
     repIvc.publish()
@@ -143,7 +164,7 @@ class MoKaBu:
     if pkPerson:
       sqlFilt='fkPerson=%d'%pkPerson
       sqlFilt='ps.id=%d'%pkPerson
-      sqlData=dbc.execute('SELECT fstName,lstName FROM Person ps WHERE id=%d'%pkPerson).fetchone()
+      sqlData=dbc.execute('SELECT cltFstName,cltLstName FROM Person ps WHERE id=%d'%pkPerson).fetchone()
       path='therapy_progress'
       try:
         os.mkdir(path)
@@ -151,7 +172,7 @@ class MoKaBu:
         pass
       fn=os.path.join(path,'Verlauf'+str(sqlData[1])+str(sqlData[0])+'.pdf')
 
-    sqlTplBeh='SELECT fkPerson,lstName,fstName,dtBirth,phone,eMail,dtTreatment,tr.comment,document FROM Treatment tr LEFT JOIN Person ps ON tr.fkPerson=ps.id'
+    sqlTplBeh='SELECT fkPerson,cltLstName,cltFstName,cltDtBirth,phone,eMail,dtTreatment,tr.comment,document FROM Treatment tr LEFT JOIN Person ps ON tr.fkPerson=ps.id'
     sqlTplOrd='ORDER BY fkPerson,tr.dtTreatment'''
 
     if sqlFilt is None:

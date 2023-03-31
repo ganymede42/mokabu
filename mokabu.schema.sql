@@ -37,30 +37,33 @@ PRAGMA foreign_keys = 1;
 -- TABLE Person definition
 
 CREATE TABLE Person (
-	id INTEGER NOT NULL,
-	ivcPrefix TEXT,
-	ivcLstName TEXT,
-	ivcFstName TEXT,
-	ivcAddress TEXT,
-	ivcAddress1 TEXT,
-	ivcAddress2 TEXT,
-	zipCode INTEGER DEFAULT 0,
-	city TEXT,
-	lstName TEXT,
-	fstName TEXT,
-	phone TEXT,
-	phone1 TEXT,
-	phone2 TEXT,
-	dtBirth TEXT,
-	eMail TEXT,
-	eMail1 TEXT,
-	eMail2 TEXT,
-	ahvNr TEXT,
-	comment TEXT,
-	CONSTRAINT CpkPerson PRIMARY KEY (id)
-);
-CREATE UNIQUE INDEX IdxPerson ON Person (id);
+  id  INTEGER NOT NULL,
 
+  cltPrefix TEXT,
+  cltLstName TEXT NOT NULL,
+  cltFstName TEXT NOT NULL,
+  cltAddress  TEXT,
+  cltZipCode INTEGER,
+  cltCity  TEXT,
+  cltAhvNr TEXT,
+  cltDtBirth DATETIME,
+
+  ivcPrefix TEXT,
+  ivcLstName  TEXT,
+  ivcFstName  TEXT,
+  ivcAddress  TEXT,
+  ivcZipCode INTEGER,
+  ivcCity  TEXT,
+
+  phone TEXT,
+  phone1  TEXT,
+  phone2  TEXT,
+  eMail TEXT,
+  eMail1  TEXT,
+  eMail2  TEXT,
+  comment TEXT,
+  CONSTRAINT CpkPerson PRIMARY KEY(id)
+);
 
 -- TABLE Invoice definition
 
@@ -146,5 +149,6 @@ INSERT INTO EventType (id,tblName,comment) VALUES
 (102,'Invoice','1. Mahnung erstellt'),
 (103,'Invoice','2. Mahnung erstellt');
 
+PRAGMA application_id=1; --- set application_id (initial=0)
 
 VACUUM;
