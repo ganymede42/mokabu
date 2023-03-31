@@ -41,6 +41,19 @@ lutLstErb={
     'GLN':7601003944099,
     'UID': 'CHE320888520',
     'ZSR':'S633931',
+  },
+  'CA_M':{
+    'vorname': 'Caroline',
+    'name': 'Maroni',
+    'email': 'caroline.maroni@fsp-hin.ch',
+    'telM': '+41 78 660 74 30',
+    'adr': 'Dufourstrase 130',
+    'plz':'8008',
+    'ort': 'Zürich',
+    'qrFmt':'SPC\n0200\n1\nCH1680808004966166240\nS\nCaroline Maroni\nDufourstrase 130\n\n8008\nZürich\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\n\n\n\n\n\n\n\nNON\n\n%s\nEPD',
+    'GLN':7601003944099,
+    'UID': 'CHE462837078',
+    'ZSR':'Y871331',
   }
 }
 

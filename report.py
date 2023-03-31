@@ -128,7 +128,11 @@ class Invoice():
     self._lstErb=self._lut.lst_erb(krzLstErb)
 
     #if tplID==None:tplID=0x08
-    if tplID==None:tplID=0x28
+    if tplID==None:
+      if krzLstErb in('MK_A','MK_Z'):
+        tplID=0x28
+      else:
+        tplID=0x38
     if type(tplID)!=int:
       _log.warning(f'{tplID} {type(tplID)}')
       tplID=0x08
