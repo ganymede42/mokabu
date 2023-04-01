@@ -248,7 +248,7 @@ class Invoice():
     data=[
     ('Patient'        ,'Name'             ,kNa,),
     (''               ,'Vorname'          ,kVo,),
-    (''               ,'Strasse'          ,kAdr),
+    (''               ,'Strasse'          ,', '.join(kAdr.split('|')) ),
     (''               ,'PLZ'              ,kPlz),
     (''               ,'Ort'              ,kOrt),
     (''               ,'Geburtsdatum'     ,kGeb),
@@ -400,7 +400,7 @@ class Invoice():
 
     if (tplID)&0x8:
       # (193.5, '15.08.2022 Roger Meyer')
-      txt=lstErb['qrFmt']%(totSum,dateconvert(rng[1])+' '+klient[8]+' '+klient[9])
+      txt=lstErb['qrFmt']%(totSum,dateconvert(rng[1])+' '+kNa+' '+kVo)
       from reportlab.graphics.shapes import Drawing
       from reportlab.graphics.barcode import getCodes
       outDir='/tmp/barcode'

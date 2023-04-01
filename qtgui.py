@@ -4,7 +4,7 @@
 import logging
 _log=logging.getLogger(__name__)
 
-import sys,time,os
+import sys,time,os,subprocess
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtCore as qtc
 import PyQt5.QtCore as qtc
@@ -15,6 +15,18 @@ import report
 import wordprocessor as wp
 import traceback
 import sqlite3 as lite
+
+def get_version(path='.'):
+  #sys.stdout.write('getVersion() -> using git command -> ')
+  p = subprocess.Popen(f'git -C {path} describe --match "*.*.*" --long --tags --dirty=-mod', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  retval = p.wait()
+  res=p.stdout.readline()
+  p.stdout.close()
+  #res=res.decode()[1:-1].split('-',2)
+  res=res.decode()[:-1].split('-',2)
+  ver='.'.join(res[:2])
+  gitcmt=res[2][1:]
+  return (ver,gitcmt)
 
 def excepthook(exc_type,exc_value,exc_tb):
   tb="".join(traceback.format_exception(exc_type,exc_value,exc_tb))
@@ -1694,6 +1706,8 @@ class WndMain(qtw.QMainWindow):
     act=AddMenuAction(self,mnRpt,"Invoices",self.OnRepInvoices)
     act=AddMenuAction(self,mnRpt,"Therapy Progress",self.OnRepTherapyProgress)
     act=AddMenuAction(self,mnRpt,"Couvert",self.OnCouvert)
+    mnHlp=mainMenu.addMenu('&Help')
+    act=AddMenuAction(self,mnHlp,"About...",self.OnAbout)
     mnDbg=mainMenu.addMenu('&Debug')
     act=AddMenuAction(self,mnDbg,"Table Person",self.OnTblPerson,shortcut="Ctrl+Shift+A")
     act=AddMenuAction(self,mnDbg,"Table Treatment",self.OnTblTreatment,shortcut="Ctrl+Shift+S")
@@ -1806,6 +1820,25 @@ class WndMain(qtw.QMainWindow):
     _log.debug('')
     wnd=qtw.QWidget();wnd.setWindowTitle("WndQryTreatment")
     WndChildAdd(wnd)
+
+  def OnAbout(self):
+    try:
+      ver, gitcmt=get_version()
+      v_MK=f'{ver} git:{gitcmt}'
+    except:
+      v_MK='git version failed'
+
+    txt=f'''About Mokabu:
+
+  Mokabu: {v_MK}
+
+  Copyright (c) 2020
+  Author Thierry Zamofing (th.zamofing@gmail.com)
+  latest package at:
+  https://github.com/ganymede42/mokabu/archive/refs/heads/master.zip
+  '''
+    qtw.QMessageBox.about(self, "Mokabu", txt)
+
 
 
 #https://doc.qt.io/qtforpython/PySide2/QtSql/QSqlRelationalTableModel.html

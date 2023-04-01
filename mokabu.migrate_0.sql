@@ -34,8 +34,8 @@ CREATE TABLE PersonNew (
   CONSTRAINT CpkPerson PRIMARY KEY(id)
 );
 
-INSERT INTO PersonNew (id, cltPrefix, cltLstName, cltFstName, cltAddress, cltZipCode, cltCity, cltAhvNr, cltDtBirth, ivcPrefix, ivcLstName, ivcFstName, ivcAddress,                                                               ivcZipCode, ivcCity, phone, phone1, phone2, eMail, eMail1, eMail2, comment)
-  SELECT               id, '',        lstName,    fstName,    NULL,       NULL,       NULL,    ahvNr,    dtBirth,    ivcPrefix, ivcLstName, ivcFstName, ivcAddress||COALESCE('|'||ivcAddress1,'')||COALESCE('|'||ivcAddress2,''), zipCode,    city,    phone, phone1, phone2, eMail, eMail1, eMail2, comment FROM Person;
+INSERT INTO PersonNew (id, cltPrefix, cltLstName, cltFstName, cltAddress,                                                               cltZipCode, cltCity, cltAhvNr, cltDtBirth, ivcPrefix, ivcLstName, ivcFstName, ivcAddress,                                                               ivcZipCode, ivcCity, phone, phone1, phone2, eMail, eMail1, eMail2, comment)
+  SELECT               id, '',        lstName,    fstName,    ivcAddress||COALESCE('|'||ivcAddress1,'')||COALESCE('|'||ivcAddress2,''), zipCode,    city,    ahvNr,    dtBirth,    ivcPrefix, ivcLstName, ivcFstName, ivcAddress||COALESCE('|'||ivcAddress1,'')||COALESCE('|'||ivcAddress2,''), zipCode,    city,    phone, phone1, phone2, eMail, eMail1, eMail2, comment FROM Person;
 
 DROP TABLE Person;
 

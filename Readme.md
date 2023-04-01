@@ -2,6 +2,8 @@ kleines Handbuch
 ================
 ```
 !!! Warnung Software ist in einem Alpha-Teststadium !!!
+Direkter link des letzen status:
+https://github.com/ganymede42/mokabu/archive/refs/heads/master.zip
 ```
 
 Personen verwalten,Akteneinträge,Rechnungen, Verlauf drucken
