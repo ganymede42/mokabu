@@ -2,60 +2,6 @@
 import logging
 _log=logging.getLogger(__name__)
 
-lutLstErb={
-  'MK_A': {
-    'vorname': 'Monika',
-    'name': 'Kast Perry',
-    'email': 'monika.kast-perry@psychologie.ch',
-    'telM': '+41 76 335 72 79',
-    'adr': 'Weihermattstrasse 11a',
-    'plz':'5242',
-    'ort': 'Birr',
-    'qrFmt':'SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis Weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\n\n\n\n\n\n\n\nNON\n\n%s\nEPD',
-    'GLN':7601007566037,
-    'UID':'CHE327073453',
-    'ZSR':'I989819',
-  },
-  'MK_Z':{
-    'vorname': 'Monika',
-    'name': 'Kast Perry',
-    'email': 'monika.kast-perry@psychologie.ch',
-    'telM': '+41 76 335 72 79',
-    'adr': 'Riedthofstrasse 100',
-    'plz':'8105',
-    'ort': 'Regensdorf',
-    'qrFmt':'SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis Weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\n\n\n\n\n\n\n\nNON\n\n%s\nEPD',
-    'GLN':7601007566037,
-    'UID': 'CHE327073453',
-    'ZSR':'D749131',
-  },
-  'TA_R':{
-    'vorname': 'Tanja',
-    'name': 'Rom',
-    'email': 'tanja.rom@gmail.com',
-    'telM': '+41 76 563 72 72',
-    'adr': 'Häringstrasse 20',
-    'plz':'8001',
-    'ort': 'Zürich',
-    'qrFmt':'SPC\n0200\n1\nCH0600700112700738038\nS\nTanja Rom\nHäringstrasse 20\n\n8001\nZürich\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\n\n\n\n\n\n\n\nNON\n\n%s\nEPD',
-    'GLN':7601003944099,
-    'UID': 'CHE320888520',
-    'ZSR':'S633931',
-  },
-  'CA_M':{
-    'vorname': 'Caroline',
-    'name': 'Maroni',
-    'email': 'caroline.maroni@fsp-hin.ch',
-    'telM': '+41 78 660 74 30',
-    'adr': 'Dufourstrase 130',
-    'plz':'8008',
-    'ort': 'Zürich',
-    'qrFmt':'SPC\n0200\n1\nCH1680808004966166240\nS\nCaroline Maroni\nDufourstrase 130\n\n8008\nZürich\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\n\n\n\n\n\n\n\nNON\n\n%s\nEPD',
-    'GLN':7601003944099,
-    'UID': 'CHE462837078',
-    'ZSR':'Y871331',
-  }
-}
 
 rawTxt='''\
 PA	"Therapieleistungen in Anwesenheit des Patienten (gemäss Art. 11b Abs. 1 lit. a KLV)"	Regulär angeordnete Psychotherapie. Anordnung von maximal 15 Therapiesitzungen durch Ärzte oder Ärztinnen der Grundversorgung sowie der psychiatrischen und psychosomatischen Versorgung. Für die Weiterführung der Psychotherapie nach kumuliert 30 Sitzungen ist vor Einreichung des Berichts mit einem Vorschlag zur Fortsetzung der Therapie eine Fallbeurteilung durch Fachärzte oder Fachärztinnen mit den Weiterbildungstiteln Psychiatrie und Psychotherapie oder Kinder- und Jugendpsychiatrie und -psychotherapie erforderlich.
@@ -96,18 +42,23 @@ PN010	Administrativer Notfallaufwand, im Zeitraum 07:00-19:00 Uhr wochentags	"Gi
 PN020	Notfallzuschlag 20%, Freitag 19:00 Uhr bis Montag 07:00 Uhr, wochentags 19:00 Uhr bis 07:00 Uhr und an gesetzlichen Feiertagen, prozentual	"Zuschlag zu Therapie oder Diagnostik im Notfall an Wochenenden (Freitag 19:00 Uhr bis Montag 07:00 Uhr) und Feiertagen sowie 19:00 bis 07:00 Uhr. Gilt für Behandlung, psychotherapeutisch notwendig und vom Patienten, Angehörigen oder Dritten als notwendig erachtet. Dabei kann es sich um eine plötzlich entstandene Krise, eine Selbst- oder eine Fremdgefährdung oder eine Dekompensation des Patienten handeln. Der Psychotherapeut befasst sich unverzüglich nach Kenntnisnahme des Notfalls mit dem Patienten. Es wird ein direkter und unmittelbarer Therapeut-Patient-Kontakt vorausgesetzt, unabhängig von der Örtlichkeit. Die Konsultation kann auch fernmündlich erfolgen. Die Behandlung von ordentlich angemeldeten Patienten gilt nicht als Notfall, auch wenn sie in diesem Zeitraum erfolgen. Behandlung von nicht angemeldeten Patienten gilt nicht generell als Notfall und berechtigt nicht generell zur Verrechnung des Notfallzuschlags."
 PW	Weg und Material (gelten für Therapieleistungen gemäss Art. 11b Abs.1 lit. a und lit. b KLV)
 PW010	Wegentschädigung beim Patientenkontakt ausserhalb der Behandlungsräume, pro 1 Min. 	Effektive Wegzeit (An- und Rückreise). Bei einem vergeblichen Aufsuchen kann die Wegzeit abgerechnet werden, sofern eine nachweisbare therapeutische Indikation zur Abwesenheit des Patienten führte. Beim Aufsuchen von mehreren Patienten in der gleichen Tour kann nur der Ortswechsel abgerechnet werden. Wegzeiten dürfen nur abgerechnet werden, wenn die Situation, das Befinden und/oder das Störungsbild des Patienten die Behandlung ausserhalb der Behandlungsräumlichkeiten erfordert. Durch Psychologische Psychotherapeuten oder Organisationen der psychologischen Psychotherapeuten, die ausschliesslich aufsuchend tätig sind, nicht abrechenbar.
-PW020	Für die Therapie und Diagnostik benötigtes zusätzliches Testmaterial, CHF	Verbrauchsmaterial ist separat zu erfassen, sofern der Einkaufspreis pro Einzelstück grösser Fr. 20.-. Für die Therapie und Diagnostik benötigtes, für den Patienten spezifisch eingekauftes Testmaterial zum einmaligen Gebrauch - Beispielsweise Testbögen, Onlinetestungen und -auswertungen.\
+PW020	Für die Therapie und Diagnostik benötigtes zusätzliches Testmaterial, CHF	Verbrauchsmaterial ist separat zu erfassen, sofern der Einkaufspreis pro Einzelstück grösser Fr. 20.-. Für die Therapie und Diagnostik benötigtes, für den Patienten spezifisch eingekauftes Testmaterial zum einmaligen Gebrauch - Beispielsweise Testbögen, Onlinetestungen und -auswertungen.
+582.1	IV.1
+582.2	IV.2
+582.3	IV.3
+582.4	IV.4
+582.5	IV.5
+582.6	IV.6
+582.7	IV.7
+582.8	IV.8\
 '''
 
 class Lut:
   def __init__(self):
     pass
 
-  def open(self, krzLstErb=None):
+  def open(self):
     self._lutTarZif=lut=dict()
-    self._lutLstErb=lutLstErb
-    if krzLstErb is not None:
-      self._krzLstErb=krzLstErb
 
     for ln in rawTxt.split('\n'):
       el=ln.split('\t')
@@ -118,9 +69,6 @@ class Lut:
 
   def tar_zif(self,tz):
     return self._lutTarZif[tz]
-
-  def lst_erb(self,lstErb):
-    return self._lutLstErb[lstErb]
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(module)s:%(lineno)d:%(funcName)s:%(message)s ')

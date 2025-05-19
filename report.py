@@ -114,7 +114,8 @@ class Couvert():
 
 class Invoice():
 
-  def __init__(self,fn='invoice.pdf',lut=None):
+  def __init__(self,fn='invoice.pdf',cfg=None,lut=None):
+    self._cfg=cfg
     self._lut=lut
     #dimension by default 1/72 inch
     self.canvas=canvas=rlpg.canvas.Canvas(fn,pagesize=rlps.A4)
@@ -123,32 +124,27 @@ class Invoice():
     styles.add(rls.ParagraphStyle(name='Right', alignment=rle.TA_RIGHT))
     styles.add(rls.ParagraphStyle(name='Center', alignment=rle.TA_CENTER))
 
-  def build(self,tplID,krzLstErb,klient,rng,behandlungen):
-    #lstErb Leistungserbringer
-    #klient: ivcPrefix,ivcLstName,ivcFstName,ivcAddress,ivcZipCode,ivcCity,
-    #        cltPrefix,cltLstName,cltFstName,cltAddress,cltZipCode,cltCity,cltDtBirth,cltAhvNr
-
-    self._lstErb=self._lut.lst_erb(krzLstErb)
-
+  def build(self,idRng,idTpl,rechnung,behandlungen):
     #if tplID==None:tplID=0x08
-    if tplID==None:
-      if krzLstErb in('MK_A','MK_Z'):
-        tplID=0x28
-      else:
-        tplID=0x38
-    if type(tplID)!=int:
-      _log.warning(f'{tplID} {type(tplID)}')
-      tplID=0x08
+    if idTpl==None:
+      idTpl=self._cfg['rechnung']['dftTpl']
 
-    fmt=(tplID>>4)&0x3
+    fmt=(idTpl>>4)&0x3
     if fmt in (0,1):
-      self.buildOrig(tplID,klient,rng[1],behandlungen)
+      self.buildOrig(idRng,idTpl,rechnung,behandlungen)
     if fmt in(2,3):
-      self.buildTarZif(tplID,klient,rng,behandlungen)
+      self.buildTarZif(idRng,idTpl,rechnung,behandlungen)
     self.canvas.showPage()
 
-  def buildTarZif(self,tplID,klient,rng,beh):
-    tplMahnung=tplID&0x3
+  def buildTarZif(self,idRng,idTpl,rechnung,behandlungen):
+    cfgRng=self._cfg['rechnung']
+    cfgImg=self._cfg['images']
+    cfgPrs=self._cfg['person']
+    rDt,rAnr,rNa,rVo,rAdr,rPlz,rOrt,kAnr,kNa,kVo,kAdr,kPlz,kOrt,kGeb,kAhv=rechnung
+    rDt=time.strptime(rDt,'%Y-%m-%d')
+
+
+    tplMahnung=idTpl&0x3
     canvas=self.canvas
     styles=self.styles
     styN=styles['Normal']
@@ -173,17 +169,12 @@ class Invoice():
 
     story=[]
 
-    if (tplID>>4)&0x3 == 2: # format Monika Kast
-      im=rlp.Image("Logo_Monika_s.png",7*rlu.cm,2*rlu.cm)
-      im.drawOn(canvas, brd[0], sz[1]-brd[2]-2*rlu.cm)
-      txt='''<font size="7"><b>Monika Kast Perry</b><br/>
-      Dr. phil., Fachpsychologin<br/>
-      für Kinder- & Jugendpsychologie FSP<br/>
-      eidg. anerkannte Psychotherapeutin.<br/>
-      Weihermattstrasse 11a · 5242 Birr · +41 76 335 72 79<br/>
-      monika.kast-perry@psychologie.ch · praxis-weiterkommen.com</font>'''
-      p=rlp.Paragraph(txt, styR)
-      story.append(rlp.Paragraph(txt,styR))
+    if (idTpl>>4)&0x3 == 2: # format Monika Kast
+      if os.path.exists(cfgImg['small']):
+        im=rlp.Image(cfgImg['small'],7*rlu.cm,2*rlu.cm) # Logo_Monika_s.png
+        im.drawOn(canvas, brd[0], sz[1]-brd[2]-2*rlu.cm)
+      #p=rlp.Paragraph(txt, styR)
+      story.append(rlp.Paragraph(cfgRng['header'],styR))
       txt='''<font size="15"><b>TP-Rechnung</b><br/></font>'''
       story.append(rlp.Spacer(1,-22))
       story.append(rlp.Paragraph(txt,styN))
@@ -200,32 +191,30 @@ class Invoice():
                              ('TOPPADDING',(0,0), (-1,-1),0),
                              ('BOTTOMPADDING',(0,0), (-1,-1),0),
                              ])
-    datRng=time.strptime(rng[1],'%Y-%m-%d')
-    #time.mktime(time.gmtime(time.time()))
-    id=int(time.mktime(datRng))+rng[0]
-    data=[('Dokument','Identifikation',str(id),time.strftime('%d.%m.%Y %H:%M:%S',datRng),'Seite 1',)]
+    idUnq=int(time.mktime(rDt))+idRng
+    data=[('Dokument','Identifikation',str(idUnq),time.strftime('%d.%m.%Y %H:%M:%S',rDt),'Seite 1',)]
     t=rlp.Table(data,colWidths=(60,60,70,270,50,)) #sum=510
     t.hAlign='LEFT'
     t.setStyle(tblStyle)
     story.append(t)
 
-    lstErb=self._lstErb
-    vorname=lstErb['vorname']
-    name=lstErb['name']
-    email=lstErb['email']
-    tel=lstErb['telM']
-    adr=lstErb['adr']
-    plz=lstErb['plz']
-    ort=lstErb['ort']
-    qrFmt=lstErb['qrFmt']
-    GLN=str(lstErb['GLN'])
-    UID=lstErb['UID']
-    ZSR=lstErb['ZSR']
+    #lleistungserbringer
+    lVo=cfgPrs['vorname']
+    lNa=cfgPrs['name']
+    lEml=cfgPrs['email']
+    lTel=cfgPrs['telM']
+    lAdr=cfgPrs['adr']
+    lPlz=cfgPrs['plz']
+    lOrt=cfgPrs['ort']
+    lQrFmt=cfgPrs['qrFmt']
+    lGLN=str(cfgPrs['GLN'])
+    lUID=cfgPrs['UID']
+    lZSR=cfgPrs['ZSR']
 
-    data=[('Rechnungs-','GLN-Nr. (B)',GLN,f'{vorname} {name}', 'E-mail:',email),
-          ('steller',   'ZSR-Nr. (B)',ZSR,f'{adr} - {plz} {ort}','Tel:',   tel),
-          ('Leistungs-','GLN-Nr. (P)',GLN,f'{vorname} {name}', 'E-mail:',email),
-          ('erbringer', 'ZSR-Nr. (P)',ZSR,f'{adr} - {plz} {ort}','Tel:',   tel)]
+    data=[('Rechnungs-','GLN-Nr. (B)',lGLN,f'{lVo} {lNa}', 'E-mail:',lEml),
+          ('steller',   'ZSR-Nr. (B)',lZSR,f'{lAdr} - {lPlz} {lOrt}','Tel:', lTel),
+          ('Leistungs-','GLN-Nr. (P)',lGLN,f'{lVo} {lNa}', 'E-mail:',lEml),
+          ('erbringer', 'ZSR-Nr. (P)',lZSR,f'{lAdr} - {lPlz} {lOrt}','Tel:', lTel)]
     t=rlp.Table(data,colWidths=(60,60,70,140,40,140,))
     tblStyle=rlp.TableStyle([#('INNERGRID',(0,0),(-1,-1),0.15,rll.colors.black),
                              ('BOX',(0,0),(-1,-1),0.15,rll.colors.black),
@@ -238,7 +227,6 @@ class Invoice():
     t.setStyle(tblStyle)
     story.append(t)
 
-    rAnr,rNa,rVo,rAdr,rPlz,rOrt,kAnr,kNa,kVo,kAdr,kPlz,kOrt,kGeb,kAhv=klient
     try:
       kGeb=time.strptime(kGeb,'%Y-%m-%d')
       kGeb=time.strftime('%d.%m.%Y',kGeb)
@@ -283,7 +271,7 @@ class Invoice():
     t.setStyle(tblStyle)
     story.append(t)
 
-    data=[('GLN-Liste','1/'+GLN),]
+    data=[('GLN-Liste','1/'+lGLN),]
     t=rlp.Table(data,colWidths=(60+60,70+140+40+140,))
     tblStyle=rlp.TableStyle([#('INNERGRID',(0,0),(-1,-1),0.15,rll.colors.black),
                              ('BOX',(0,0),(-1,-1),0.15,rll.colors.black),
@@ -317,7 +305,7 @@ class Invoice():
     ]
 
     i=2
-    for datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif in beh:
+    for datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif in behandlungen:
       if Stundenansatz is None: Stundenansatz=0
       if Dauer is None: Dauer=0
       if TarZif is None:
@@ -357,31 +345,27 @@ class Invoice():
     story.append(t)
 
     story.append(rlp.Spacer(1,12))
-    if (tplID>>4)&0x3 == 2: # format Monika Kast
+    if (idTpl>>4)&0x3 == 2: # format Monika Kast
       if tplMahnung==1:
-        txt='<b>Zahlungserinnerung</b><br/>Es dürfte Ihrer Aufmerksamkeit entgangen sein, dass die nachstehend aufgeführten Rechnungsposten noch offen sind. Ich bitte Sie, die fälligen Rechnungsbeträge innert 10 Tagen einzuzahlen und danke Ihnen für die fristgerechte Überweisung. Sollte sich Ihre Zahlung mit diesem Schreiben gekreuzt haben, betrachten Sie es bitte als gegenstandslos.<br/><br/>'
-        txt+='Bitte überweisen Sie, den Betrag von SFr. %.2f auf folgendes Konto:<br/>'\
-             'St. Galler Kantonalbank, IBAN-Nr. CH60 0078 1622 4188 6200 0<br/>'%totSum
+        txt=cfgRng['mahnung1']%totSum
 
       elif tplMahnung==2:
-        txt='<b>2. Mahnung</b><br/>Den unten stehenden Rechnungsposten haben Sie trotz Zahlungserinnerung nicht bezahlt. Sie ersparen sich Unannehmlichkeiten und weitere Kosten, wenn Sie den fälligen Betrag innert 15 Tagen überweisen. Sollte sich Ihre Zahlung mit diesem Schreiben gekreuzt haben, betrachten Sie es bitte als gegenstandslos.<br/><br/>'
-        txt+='Bitte überweisen Sie, den Betrag von SFr. %.2f auf folgendes Konto:<br/>'\
-             'St. Galler Kantonalbank, IBAN-Nr. CH60 0078 1622 4188 6200 0<br/>'%totSum
+        txt=cfgRng['mahnung2']%totSum
       else:
-        txt='''Ich bitte Sie, den Betrag von SFr. %.2f innert 30 Tagen auf folgendes Konto zu überweisen:<br/>
-        St. Galler Kantonalbank, IBAN-Nr. CH60 0078 1622 4188 6200 0<br/>'''%totSum
+        txt=cfgRng['default']%totSum
 
       story.append(rlp.Spacer(1,12))
       story.append(rlp.Paragraph(txt,styN))
-      txt='''Herzlichen Dank und freundliche Grüsse'''
+      txt=cfgRng['gruss']
       story.append(rlp.Spacer(100,12))
       story.append(rlp.Paragraph(txt,styN))
       story.append(rlp.Spacer(1,12))
-      im=rlp.Image("signature.png",8*rlu.cm,8*262/1024*rlu.cm) #1024x262, 735x139
-      im.hAlign='CENTER'
-      story.append(im)
+      if os.path.exists(cfgImg['signature']):
+        im=rlp.Image(cfgImg['signature'],8*rlu.cm,8*262/1024*rlu.cm) #1024x262, 735x139
+        im.hAlign='CENTER'
+        story.append(im)
       story.append(rlp.Spacer(1,12))
-      txt='''Monika Kast Perry'''
+      txt=f'{lVo} {lNa}'
       story.append(rlp.Paragraph(txt,styC))
       story.append(rlp.Spacer(1,12))
 
@@ -398,9 +382,9 @@ class Invoice():
 
 
 
-    if (tplID)&0x8:
+    if (idTpl)&0x8:
       # (193.5, '15.08.2022 Roger Meyer')
-      txt=lstErb['qrFmt']%(totSum,dateconvert(rng[1])+' '+kNa+' '+kVo)
+      txt=lQrFmt%(totSum,time.strftime('%d.%m.%Y', rDt)+' '+kNa+' '+kVo)
       from reportlab.graphics.shapes import Drawing
       from reportlab.graphics.barcode import getCodes
       outDir='/tmp/barcode'
@@ -422,7 +406,7 @@ class Invoice():
 
     story=[]
     # 11.3 4.6
-    if (tplID>>4)&0x3 == 2: # format Monika Kast
+    if (idTpl>>4)&0x3 == 2: # format Monika Kast
       frm=rlp.Frame(12*rlu.cm, sz[1]-8.7*rlu.cm, 7*rlu.cm, 2.5*rlu.cm, showBoundary=0)
     else:
       frm=rlp.Frame(12*rlu.cm, sz[1]-7.0*rlu.cm, 5*rlu.cm, 2.5*rlu.cm, showBoundary=0)
@@ -441,10 +425,12 @@ class Invoice():
     # /-/#96#28012018213945#634317
 
 
-  def buildOrig(self,tplID,klient,datRng,behandlungen):
-    tplMahnung=tplID&0x3
-    tplIV=(tplID)&0x10
-    tplQR=(tplID)&0x8
+  def buildOrig(self,idRng,idTpl,rechnung,behandlungen):
+    rDt,rAnr,rNa,rVo,rAdr,rPlz,rOrt,kAnr,kNa,kVo,kAdr,kPlz,kOrt,kGeb,kAhv=rechnung
+
+    tplMahnung=idTpl&0x3
+    tplIV=(idTpl)&0x10
+    tplQR=(idTpl)&0x8
 
     canvas=self.canvas
     styles=self.styles
@@ -468,8 +454,6 @@ class Invoice():
     story.append(im)
     story.append(rlp.Spacer(1,12))
 
-    rAnr,rNa,rVo,rAdr,rPlz,rOrt,kAnr,kNa,kVo,kAdr,kPlz,kOrt,kGeb,kAhv=klient
-
     txt='''<font size="7"><b>Monika Kast Perry</b><br/>
     Dr. phil., Fachpsychologin<br/>
     für Kinder- & Jugendpsychologie FSP<br/>
@@ -484,7 +468,7 @@ class Invoice():
     {rPlz} {rOrt}<br/>'''
     story.append(rlp.Paragraph(txt,styN))
     story.append(rlp.Spacer(1,24+24))
-    txt='Birr, %s'%dateconvert(datRng)
+    txt='Birr, %s'%dateconvert(rDt)
     story.append(rlp.Paragraph(txt,styN))
     story.append(rlp.Spacer(1,12))
 
@@ -591,7 +575,7 @@ class Invoice():
 
     if tplQR:
       fmt='''SPC\n0200\n1\nCH6000781622418862000\nS\nPraxis Weiterkommen Monika Kast Perry\nWeihermattstrasse 11a\n\n5242\nBirr\nCH\n\n\n\n\n\n\n\n%.2f\nCHF\n\n\n\n\n\n\n\nNON\n\n%s\nEPD'''
-      txt=fmt%(totSum,dateconvert(datRng)+' '+klient[8]+' '+klient[9])
+      txt=fmt%(totSum,dateconvert(rDt)+' '+klient[8]+' '+klient[9])
       #https://www.reportlab.com/docs/reportlab-graphics-reference.pdf
       #https://www.paymentstandards.ch/dam/downloads/ig-qr-bill-de.pdf
       #https://de.wikipedia.org/wiki/QR-Rechnung

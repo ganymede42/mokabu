@@ -15,6 +15,7 @@ import report
 import wordprocessor as wp
 import traceback
 import sqlite3 as lite
+from app_config import AppCfg,WndSetting
 
 def get_version(path='.'):
   #sys.stdout.write('getVersion() -> using git command -> ')
@@ -42,6 +43,7 @@ def MainApp(mkb,dbg):
   db.setDatabaseName('mokabu.db')
   if not db.open():
     _log.error('failed to open db')
+  app._cfg=AppCfg()
 
   app.wndTop=set()
   mainWnd=WndMain() #must be assigned to a variable, else it 'selfsdestructs' before opening
@@ -1682,19 +1684,28 @@ class WndMain(qtw.QMainWindow):
 
   def __init__(self):
     super(WndMain,self).__init__()
+    app=qtw.QApplication.instance()
+    cfg=app._cfg.value(AppCfg.SETTINGS)
+    try:
+      imgFn=cfg['images']['main']
+      img=qtg.QPixmap(imgFn)
+      icoFn=cfg['images']['icon']
+      ico=qtg.QIcon(icoFn)
+    except KeyError as e:
+      _log.warning(f'failed to load main image or icon: {e}')
+      img=ico=None
     self.setGeometry(50,50,1300,900)
     self.setWindowTitle("MoKaBu")
-    self.setWindowIcon(qtg.QIcon('logo_monika.ico'))
+    self.setWindowIcon(ico)
     #self.setWindowIcon(qtw.QIcon('pythonlogo.png'))
     #self.mdi=qtw.QMdiArea()
-    self.mdi=mdi=MdiArea(qtg.QPixmap('Logo_Monika.png'));mdi.centered=True
-
+    self.mdi=mdi=MdiArea(img);mdi.centered=True
     self.setCentralWidget(self.mdi)
-
     mainMenu=self.menuBar()
     self.statusBar()
     mnFile=mainMenu.addMenu('&File')
 
+    act=AddMenuAction(self,mnFile,"Settings...",self.OnSettings)
     act=AddMenuAction(self,mnFile,"Quit",self.OnQuit)
     mnEdit=mainMenu.addMenu('&Edit')
     act=AddMenuAction(self,mnEdit,"Person",self.OnWndPerson,shortcut="Ctrl+A")
@@ -1724,6 +1735,9 @@ class WndMain(qtw.QMainWindow):
     #  event.ignore()
     sys.exit()
 
+  def OnSettings(self):
+    wnd=WndSetting()
+    WndChildAdd(wnd)
   def OnQuit(self):
     _log.debug('')
     sys.exit()

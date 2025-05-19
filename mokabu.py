@@ -25,15 +25,18 @@ import sqlite3 as lite
 import sys,os,time
 import report
 from TarZif import Lut
+import PyQt5.QtWidgets as qtw # needed to application settings
+from app_config import AppCfg # needed to application settings
+
 
 class MoKaBu:
 
-  def __init__(self,fn='mokabu.db',lstErb=None):
+  def __init__(self,fn='mokabu.db'):
     if not os.path.exists(fn):
       self.reset(fn)
     self.open(fn)
     self._lut=lut=Lut()
-    lut.open(lstErb)
+    lut.open()
 
   def open(self,fn):
     try:
@@ -122,10 +125,10 @@ class MoKaBu:
 
     dbcRng=self.dbc
     dbcBeh=db.cursor()
-    sqlTplRng='''SELECT iv.id,tplInvoice,dtInvoice,
-    ivcPrefix,ivcLstName,ivcFstName,ivcAddress,ivcZipCode,ivcCity,
-    cltPrefix,cltLstName,cltFstName,cltAddress,cltZipCode,cltCity,cltDtBirth,cltAhvNr   
-    FROM Invoice iv LEFT JOIN Person ps on iv.fkPerson=ps.id'''
+    k=('iv.id','tplInvoice','dtInvoice',
+    'ivcPrefix','ivcLstName','ivcFstName','ivcAddress','ivcZipCode','ivcCity',
+    'cltPrefix','cltLstName','cltFstName','cltAddress','cltZipCode','cltCity','cltDtBirth','cltAhvNr')
+    sqlTplRng='SELECT '+','.join(k)+' FROM Invoice iv LEFT JOIN Person ps on iv.fkPerson=ps.id'
     sqlTplOrd='ORDER BY iv.id'''
 
     if sqlFilt is None:
@@ -136,22 +139,18 @@ class MoKaBu:
     sqlTplBeh='''SELECT dtTreatment,costPerHour,duration,comment,tarZif FROM Treatment tr
     WHERE tr.fkInvoice=%s
     ORDER BY tr.dtTreatment'''
-    repIvc=report.Invoice(fn,self._lut)
 
+    app=qtw.QApplication.instance()
+    cfg=app._cfg.value(AppCfg.SETTINGS)
+    repIvc=report.Invoice(fn,cfg,self._lut)
+    repIvc._keyRng=k
     for recRng in dbcRng.execute(sqlRng):
       _log.debug(recRng)
       sqlBeh=sqlTplBeh%recRng[0]
       dbcBeh=dbcBeh.execute(sqlBeh)
       dBeh=dbcBeh.fetchall()
       _log.debug(dBeh)
-      try:
-        krzLstErb= self._lut._krzLstErb
-      except AttributeError:
-        if recRng[13] and int(recRng[13])>=8000: #PLZ is in ZH
-          krzLstErb='MK_Z'
-        else:
-          krzLstErb='MK_A'
-      repIvc.build(recRng[1],krzLstErb,recRng[3:], (recRng[0],recRng[2]),dBeh)#  add(klient,tplID,datRng,behandlungen):
+      repIvc.build(recRng[0],recRng[1],recRng[2:],dBeh) # build(idRng,idTpl,rechnung,behandlungen):
 
     repIvc.publish()
     report.default_app_open(fn);
@@ -247,14 +246,13 @@ if __name__=='__main__':
   parser.add_argument('-m', '--mode', type=lambda x: int(x,0), help='mode (see bitmasks) default=0x%(default)x', default=0x0)
   parser.add_argument("--database", help="database file", default='mokabu.db')
   parser.add_argument("-l", "--loglevel", type=int, help="50:Critical 4:Error 3:Warning 2:Info 1:DEBUG default=%(default)u", default=2)
-  parser.add_argument('--lstErb', help='Kürzel Leistungserbringer', default=None)
   args = parser.parse_args()
   _log.debug(args)
   #logging.basicConfig(level=logging.DEBUG, format='%(name)s%(levelname)s:%(module)s:%(lineno)d:%(funcName)s:%(message)s ')
   logging.basicConfig(level=args.loglevel*10, format='%(levelname)s:%(module)s:%(lineno)d:%(funcName)s:%(message)s ')
 
 
-  mkb=MoKaBu(args.database,args.lstErb)
+  mkb=MoKaBu(args.database)
   if args.mode&1:
     mkb.report_invoice();exit(0)
   if args.mode&2:
