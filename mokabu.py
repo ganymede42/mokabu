@@ -24,7 +24,7 @@ _log=logging.getLogger(__name__)
 import sqlite3 as lite
 import sys,os,time
 import report
-from TarZif import Lut
+from TarZif import Lut as LutTarZif
 import PyQt5.QtWidgets as qtw # needed to application settings
 from app_config import AppCfg # needed to application settings
 
@@ -35,8 +35,6 @@ class MoKaBu:
     if not os.path.exists(fn):
       self.reset(fn)
     self.open(fn)
-    self._lut=lut=Lut()
-    lut.open()
 
   def open(self,fn):
     try:
@@ -142,7 +140,7 @@ class MoKaBu:
 
     app=qtw.QApplication.instance()
     cfg=app._cfg.value(AppCfg.SETTINGS)
-    repIvc=report.Invoice(fn,cfg,self._lut)
+    repIvc=report.Invoice(fn,cfg)
     repIvc._keyRng=k
     for recRng in dbcRng.execute(sqlRng):
       _log.debug(recRng)

@@ -16,6 +16,7 @@ import wordprocessor as wp
 import traceback
 import sqlite3 as lite
 from app_config import AppCfg,WndSetting
+from TarZif import Lut as LutTarZif
 
 def get_version(path='.'):
   #sys.stdout.write('getVersion() -> using git command -> ')
@@ -125,7 +126,7 @@ def SqlUpdate(fldLst,table,sqlWhere=None):
     if type(w)==qtw.QComboBox and fld=='tarZif':
       val=w.currentText().split(':', 1)[0]
       if val:
-        assert (val in app.mkb._lut._lutTarZif.keys())
+        assert (val in LutTarZif._lutTarZif.keys())
     elif type(w)==qtw.QTextEdit: #and fld=='document':
       val=w.toPlainText()
     else:
@@ -157,7 +158,7 @@ def SqlInsert(fldLst,table):
     if table=='Treatment' and fld=='tarZif':
       val=w.currentText().split(':', 1)[0]
       if val:
-        assert (val in app.mkb._lut._lutTarZif.keys())
+        assert (val in LutTarZif._lutTarZif.keys())
     elif type(w)==qtw.QTextEdit:
       val=w.toPlainText()
     else:
@@ -1288,10 +1289,9 @@ class WndTreatment(WndSqlBase):
   def TarZifPopulate(self,cb):
     cb.setEditable(True)
     cb.setMaxVisibleItems(20)
-    lut=qtw.QApplication.instance().mkb._lut
     cmpTbl=[]
-    for k,v in lut._lutTarZif.items():
-      txt=k+': '+str(v[1])
+    for k,v in LutTarZif._lutTarZif.items():
+      txt=k+': '+str(v[2])
       cmpTbl.append(txt)
       cb.addItem(txt)
     cpl=qtw.QCompleter(cmpTbl)
@@ -1305,7 +1305,6 @@ class WndTreatment(WndSqlBase):
   def OnTarZifSelChanged(self,txt,updateCost):
     _log.debug(str(txt))
 
-    lut=qtw.QApplication.instance().mkb._lut._lutTarZif
     cb=self._cbTarZif
     cb.blockSignals(True)
     if txt=='':
@@ -1323,13 +1322,16 @@ class WndTreatment(WndSqlBase):
     if updateCost:
       w=self._fldLst[5]
       assert(w.windowTitle()=='costPerHour')
-      lut=qtw.QApplication.instance().mkb._lut
       try:
-        tz=lut.tar_zif(kv[0])
+        tz=LutTarZif.tar_zif(kv[0])
       except KeyError as e:
         _log.debug(f"Can't update costPerHour:  {e}")
       else:
-        w.setText(f'{float(tz[0])*60:0.2f}')
+        if tz[1]==0:
+          txt=f'{float(tz[0]):0.2f}'
+        else:
+          txt=f'{float(tz[0]*60/tz[1]):0.2f}'
+        w.setText(txt)
     cb.blockSignals(False)
 
   def OnWndTreatment(self):

@@ -44,8 +44,7 @@ import reportlab.pdfgen as rlpg
 import reportlab.pdfbase as rlpb
 import reportlab.pdfbase.ttfonts #else not visible
 
-
-from TarZif import Lut
+from TarZif import Lut as LutTarZif
 
 def default_app_open(file):
   if platform.system() == 'Darwin':       # macOS
@@ -114,9 +113,8 @@ class Couvert():
 
 class Invoice():
 
-  def __init__(self,fn='invoice.pdf',cfg=None,lut=None):
+  def __init__(self,fn='invoice.pdf',cfg=None):
     self._cfg=cfg
-    self._lut=lut
     #dimension by default 1/72 inch
     self.canvas=canvas=rlpg.canvas.Canvas(fn,pagesize=rlps.A4)
     self.styles=styles=rls.getSampleStyleSheet()
@@ -290,7 +288,6 @@ class Invoice():
 
     data=[('Datum','Tarif','Tarifziffer','Anzahl','TP TL','Betrag',)]
     totSum=0.
-    lut=self._lut
     ts=[  # ('INNERGRID',(0,0),(-1,-1),0.15,rll.colors.black),
       ('FONTSIZE', (0, 0), (-1, -1), 8),
       ('TOPPADDING', (0, 0), (-1, -1), 0),
@@ -311,24 +308,25 @@ class Invoice():
       if TarZif is None:
         TarZif='PA010'
         _log.warning(f'No TarifZiffer -> use default :{TarZif}')
-      anz=Dauer
-      tptl=Stundenansatz/60
       try:
-        tz=lut.tar_zif(TarZif)
+        tz=LutTarZif.tar_zif(TarZif)
       except:
         _log.error(f'Wrong TarifZiffer:{TarZif}')
         pBemerkung=''
+        tz=(0,0,'')
       else:
-        pBemerkung=rlp.Paragraph('<font size="8"><b>'+tz[1]+'</b></font>',styN)
-        _log.warning(tptl==tz[0])
+        pBemerkung=rlp.Paragraph('<font size="8"><b>'+tz[2]+'</b></font>',styN)
+      if tz[1]==0: # blockSize
+        anz=Dauer
+        tptl=Stundenansatz
+      else:
+        anz=Dauer/tz[1]
+        tptl=Stundenansatz*tz[1]/60
+      if tptl!=tz[0]:
+        _log.warning(f'Wrong costs? : {tptl}!={tz[0]}')
       tot=anz*tptl
       totSum+=tot
-      #if Bemerkung:
-      #  pBemerkung=rlp.Paragraph('<font size="8">'+Bemerkung+'</font>',styN)
-      #else:
-      #  pBemerkung=''
-      #data.append((dateconvert(datBehandlung), TarZif.split('.')[0], TarZif, Dauer, '%g'%(Dauer), '%.2f'%tot))
-      data.append((dateconvert(datBehandlung), TarZif.split('.')[0], TarZif, '%g'%(Dauer), tz[0], '%.2f'%tot))
+      data.append((dateconvert(datBehandlung), TarZif.split('.')[0], TarZif, '%g'%anz, tptl, '%.2f'%tot))
       data.append(('', pBemerkung,'','','',''))
       ts.append(('SPAN', (1, i), (-1, i)))
       i+=2
@@ -496,17 +494,26 @@ class Invoice():
       for datBehandlung,Stundenansatz,Dauer,Bemerkung,TarZif in behandlungen:
         if Stundenansatz is None: Stundenansatz=0
         if Dauer is None: Dauer=0
-        if TarZif is None:TarZif=''
-        tot=Stundenansatz*Dauer/60
+        if TarZif is None:
+          TarZif=''
+        try:
+          tz=LutTarZif.tar_zif(TarZif)
+        except KeyError as e:
+          _log.warning('TarZif not found')
+          tz=(0,0,'')
+        blkSz=tz[1]
+        if blkSz==0:
+          tot=Stundenansatz*Dauer
+          cnt=Dauer
+        else:
+          tot=Stundenansatz*Dauer/60
+          cnt=Dauer/blkSz
         totSum+=tot
-        #pBemerkung=
         if Bemerkung:
           pBemerkung=rlp.Paragraph('<font size="8">'+Bemerkung+'</font>',styN)
         else:
           pBemerkung=''
-        #data.append((dateconvert(datBehandlung),'%.2f'%Stundenansatz,'%d Min'%Dauer,pBemerkung,TarZif,'%.2f'%tot))
-        data.append((dateconvert(datBehandlung),TarZif.split('.')[0],TarZif, pBemerkung, '%g'%(Dauer/15),'%.2f'%tot))
-      #pTotSum='%.2f'%totSum
+        data.append((dateconvert(datBehandlung),TarZif.split('.')[0],TarZif, pBemerkung, '%g'%cnt,'%.2f'%tot))
       pTotSum=rlp.Paragraph('<b>%.2f</b>'%totSum,styR)
       data.append(('','','','','',pTotSum))
 
@@ -892,20 +899,14 @@ if __name__ == '__main__':
           ('2020-08-06', 180.0, 60.0, 'Bemerkung 8', '754.34')))
 
     rep=Invoice(fn)
-    lut=Lut()
-    lut.open()
-    rep._lut=lut
     #for i in range(len(lstKlient)):
     #  rep.add(lstKlient[i],None,lstDatRng[i],lstBeh[i])
     #for i in range(len(lstTpl)):
     #  rep.add(lstKlient[0],lstTpl[i],lstDatRng[0],lstBeh[0])
-
     #build(self, tplID, lstErb, klient, datRng, behandlungen):
     #rep.build(0x08,'MK_A',lstKlient[0],lstRng[0],lstBeh[0])
     rep.build(0x28,'MK_A',lstKlient[0],lstRng[0],lstBeh[0])
     rep.build(0x38,'MK_A',lstKlient[0],lstRng[0],lstBeh[0])
-
-
     rep.publish()
 
   def testTherapyProgress(fn):
