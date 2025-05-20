@@ -4,13 +4,11 @@
 import logging
 _log=logging.getLogger(__name__)
 
-import sys,time,os,subprocess
+import sys,time,subprocess
 import PyQt5.QtWidgets as qtw
-import PyQt5.QtCore as qtc
 import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtSql as qtdb
-import mokabu
 import report
 import wordprocessor as wp
 import traceback
@@ -49,8 +47,6 @@ def MainApp(mkb,dbg):
   app.wndTop=set()
   mainWnd=WndMain() #must be assigned to a variable, else it 'selfsdestructs' before opening
   mainWnd.show()
-
-  #mainWnd.OnWndPerson()
 
   if dbg&1:
     testPerson(mainWnd)
@@ -1696,7 +1692,7 @@ class WndMain(qtw.QMainWindow):
     except KeyError as e:
       _log.warning(f'failed to load main image or icon: {e}')
       img=ico=None
-    self.setGeometry(50,50,1300,900)
+    self.setGeometry(50,50,1700,1100)
     self.setWindowTitle("MoKaBu")
     self.setWindowIcon(ico)
     #self.setWindowIcon(qtw.QIcon('pythonlogo.png'))

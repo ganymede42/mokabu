@@ -24,7 +24,6 @@ _log=logging.getLogger(__name__)
 import sqlite3 as lite
 import sys,os,time
 import report
-from TarZif import Lut as LutTarZif
 import PyQt5.QtWidgets as qtw # needed to application settings
 from app_config import AppCfg # needed to application settings
 

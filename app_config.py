@@ -6,28 +6,25 @@
 # #yaml is fixed and not altened by program
 
 import logging
-import re
 
 _log = logging.getLogger(__name__)
 
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore
 from PyQt5.QtCore import QSettings
-from PyQt5.QtWidgets import QApplication, QMainWindow
 import json
-import numpy as np
 
 class MyJsonEncoder(json.JSONEncoder):
   """ Special json encoder for numpy types """
   def default(self, obj):
-    if isinstance(obj, np.integer):
-      return int(obj)
-    elif isinstance(obj, np.floating):
-      return float(obj)
-    elif isinstance(obj, np.ndarray):
-      return obj.tolist()
-    elif type(obj) not in (dict,list,str,int):
-      _log.error('dont know how to json')
-      return repr(obj)
+    #if isinstance(obj, np.integer):
+    #  return int(obj)
+    #elif isinstance(obj, np.floating):
+    #  return float(obj)
+    #elif isinstance(obj, np.ndarray):
+    #  return obj.tolist()
+    #elif type(obj) not in (dict,list,str,int):
+    #  _log.error('dont know how to json')
+    #  return repr(obj)
     return json.JSONEncoder.default(self, obj)
 
 class AppCfg(QSettings):
@@ -67,13 +64,13 @@ class AppCfg(QSettings):
           'UID':'CHE327073453',
           'ZSR':'I989819',
         },
-        'CHE327073453_zh':{
-          'adr':'Riedthofstrasse 100',
-          'plz':'8105',
-          'ort':'Regensdorf',
-          'GLN':7601007566037,
-          'ZSR':'D749131',
-        },
+        #'CHE327073453_zh':{
+        #  'adr':'Riedthofstrasse 100',
+        #  'plz':'8105',
+        #  'ort':'Regensdorf',
+        #  'GLN':7601007566037,
+        #  'ZSR':'D749131',
+        #},
         'rechnung':{
           'dftTpl':0x28,
           'header':'''\
