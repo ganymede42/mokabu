@@ -1,7 +1,17 @@
 #https://view.officeapps.live.com/op/view.aspx?src=https%3A%2F%2Fwww.psychologie.ch%2Fsites%2Fdefault%2Ffiles%2F2022-06%2F20220602_psytarif_einfuehrungsversion_tarifstruktur_de.xlsx&wdOrigin=BROWSELINK
 import logging
 _log=logging.getLogger(__name__)
+import yaml
 
+
+def tuple_constructor(loader, node):
+  # Load the sequence of values from the YAML node
+  values=loader.construct_sequence(node)
+  # Return a tuple constructed from the sequence
+  return tuple(values)
+
+# Register the constructor with PyYAML
+yaml.SafeLoader.add_constructor(u'tag:yaml.org,2002:seq', tuple_constructor)
 
 rawTxt='''\
 PA	"Therapieleistungen in Anwesenheit des Patienten (gemäss Art. 11b Abs. 1 lit. a KLV)"	Regulär angeordnete Psychotherapie. Anordnung von maximal 15 Therapiesitzungen durch Ärzte oder Ärztinnen der Grundversorgung sowie der psychiatrischen und psychosomatischen Versorgung. Für die Weiterführung der Psychotherapie nach kumuliert 30 Sitzungen ist vor Einreichung des Berichts mit einem Vorschlag zur Fortsetzung der Therapie eine Fallbeurteilung durch Fachärzte oder Fachärztinnen mit den Weiterbildungstiteln Psychiatrie und Psychotherapie oder Kinder- und Jugendpsychiatrie und -psychotherapie erforderlich.
@@ -58,14 +68,23 @@ class Lut:
     pass
 
   def open(self):
-    self._lutTarZif=lut=dict()
+    dict()
+    with open('TarZif.yaml', 'r') as fh:
+      self._lutTarZif=lut=yaml.safe_load(fh)
+    pass
 
+  def raw2yaml(self):
+    lut=dict()
     for ln in rawTxt.split('\n'):
       el=ln.split('\t')
       if not el[0]:
         _log.warning(f'ignore{el}')
         continue
-      lut[el[0]]=(2.58,)+tuple(el[1:])
+      #lut[el[0]]=(2.58,)+tuple(el[1:])
+      #lut[el[0]]=(2.58,)+tuple(el[1:])
+      lut[el[0]]=[2.58,1,el[1]]
+      with open('tmp.yaml', 'w') as fh:
+        yaml.dump(lut, fh, default_flow_style=None, allow_unicode=True,width=2000)#,Dumper=UsrDumper)
 
   def tar_zif(self,tz):
     return self._lutTarZif[tz]
@@ -73,4 +92,8 @@ class Lut:
 if __name__ == '__main__':
   logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(module)s:%(lineno)d:%(funcName)s:%(message)s ')
   tz=Lut()
+  tz.raw2yaml()
+  tz.open()
+  for k,v in tz._lutTarZif.items():
+    print(k,v)
   pass
